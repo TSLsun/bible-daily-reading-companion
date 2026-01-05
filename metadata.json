@@ -1,0 +1,5 @@
+{
+  "name": "Bible Daily Reading Companion",
+  "description": "A sophisticated Bible reading application supporting daily JSON-based plans, parallel translations, and cloud synchronization.",
+  "requestFramePermissions": []
+}
