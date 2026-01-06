@@ -12,6 +12,8 @@ export interface BibleData {
   bookCode: string;
   chapter: number;
   verses: BibleVerse[];
+  startVerse?: number;
+  endVerse?: number;
 }
 
 export interface AppSettings {
@@ -31,6 +33,8 @@ export interface ScheduleItem {
   book: string;
   chapter: number;
   id: string;
+  startVerse?: number;
+  endVerse?: number;
 }
 
 export interface VersionInfo {

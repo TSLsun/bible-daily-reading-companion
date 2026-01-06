@@ -38,7 +38,6 @@ const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => {
         <div className={`p-10 rounded-[3rem] border-2 shadow-2xl relative z-10 animate-pulse transition-all duration-500 ${containerBg[theme]}`}>
           <BookOpen className={`transition-colors duration-500 ${iconColor[theme]}`} size={64} />
         </div>
-        {/* Consistent Glow Spots */}
         <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/20 rounded-full blur-xl animate-pulse"></div>
         <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
       </div>
@@ -72,7 +71,6 @@ const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
             className={`transition-colors duration-500 ${iconColor[theme]}`} 
           />
         </div>
-        {/* Matching Glow Spots */}
         <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
         <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
       </div>
@@ -92,7 +90,6 @@ const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
 };
 
 const App: React.FC = () => {
-  // --- States ---
   const [settings, setSettings] = useState<AppSettings>({
     scheduleText: "馬太福音 1-3\n詩篇 1",
     dailyScheduleJson: JSON.stringify(DEFAULT_DAILY_SCHEDULE, null, 2),
@@ -119,7 +116,6 @@ const App: React.FC = () => {
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
   
-  // Calendar States (Target year 2026 as per user request)
   const PLAN_YEAR = 2026;
   const [currentViewDate, setCurrentViewDate] = useState(() => {
     const today = new Date();
@@ -140,7 +136,6 @@ const App: React.FC = () => {
     return `${mm}-${dd}`;
   });
 
-  // --- Persistence ---
   useEffect(() => {
     const saved = localStorage.getItem('bible_settings');
     if (saved) {
@@ -178,14 +173,13 @@ const App: React.FC = () => {
     return updated; 
   };
 
-  // --- Helpers ---
   const findBookCode = (text: string) => {
-    const lowerText = text.toLowerCase();
+    const lowerText = text.toLowerCase().trim();
     for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-      if (lowerText.includes(zh.toLowerCase())) return { en, zh };
+      if (lowerText.startsWith(zh.toLowerCase())) return { en, zh };
     }
     for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
-      if (lowerText.startsWith(alias.toLowerCase()) || lowerText.includes(alias.toLowerCase())) {
+      if (lowerText.startsWith(alias.toLowerCase())) {
         return { en: BIBLE_BOOKS[full], zh: full };
       }
     }
@@ -195,10 +189,50 @@ const App: React.FC = () => {
   const parseScheduleLine = (line: string): ScheduleItem[] => {
     const items: ScheduleItem[] = [];
     const bookInfo = findBookCode(line);
-    if (bookInfo) {
-      const numbers = line.match(/\d+/g);
+    if (!bookInfo) return items;
+
+    // Remove book name from string to parse numbers
+    const remaining = line.replace(bookInfo.zh, "").replace(Object.keys(BIBLE_ALIASES).find(a => line.startsWith(a)) || "", "").trim();
+    
+    // Check for colon (verse range)
+    if (remaining.includes(':')) {
+      const parts = remaining.split(':');
+      const chapter = parseInt(parts[0].trim());
+      const versePart = parts[1].trim();
+      
+      let startVerse: number | undefined;
+      let endVerse: number | undefined;
+      
+      if (versePart.includes('-')) {
+        const vNumbers = versePart.match(/\d+/g);
+        if (vNumbers && vNumbers.length >= 2) {
+          startVerse = parseInt(vNumbers[0]);
+          endVerse = parseInt(vNumbers[1]);
+        }
+      } else {
+        const vNum = versePart.match(/\d+/);
+        if (vNum) {
+          startVerse = parseInt(vNum[0]);
+          endVerse = startVerse;
+        }
+      }
+      
+      const label = startVerse ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}` : `${bookInfo.zh} ${chapter}`;
+      const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
+      
+      items.push({ 
+        label, 
+        book: bookInfo.en, 
+        chapter, 
+        id, 
+        startVerse, 
+        endVerse 
+      });
+    } else {
+      // Chapter range or single chapter
+      const numbers = remaining.match(/\d+/g);
       if (numbers) {
-        if (line.includes('-') && numbers.length >= 2) {
+        if (remaining.includes('-') && numbers.length >= 2) {
           const start = parseInt(numbers[0]);
           const end = parseInt(numbers[1]);
           for (let i = start; i <= end; i++) {
@@ -234,8 +268,15 @@ const App: React.FC = () => {
 
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
-    const currentId = `${bibleData.bookCode}${bibleData.chapter}`;
-    const currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentId);
+    
+    const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
+    const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+    
+    // First try to match full ID (including verses), then fallback to chapter-only ID if it's a generic chapter navigation
+    let currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentFullId);
+    if (currentIndex === -1) {
+        currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
+    }
     
     return {
       inPlan: currentIndex !== -1,
@@ -245,7 +286,7 @@ const App: React.FC = () => {
   }, [bibleData, parsedSchedule]);
 
   const fetchBible = async (
-    refInfo: { book: string, chapter: number } | null = null, 
+    refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string } | null = null, 
     customPrimary?: string, 
     customSecondary?: string | null
   ) => {
@@ -255,9 +296,13 @@ const App: React.FC = () => {
         search = { book: bibleData.bookCode, chapter: bibleData.chapter };
       } else {
         const parsed = findBookCode(input);
-        const chMatch = input.match(/\d+/);
-        if (parsed && chMatch) {
-          search = { book: parsed.en, chapter: parseInt(chMatch[0]) };
+        const numbers = input.match(/\d+/g);
+        if (parsed && numbers) {
+          search = { book: parsed.en, chapter: parseInt(numbers[0]) };
+          if (input.includes(':') && numbers.length >= 2) {
+             search.startVerse = parseInt(numbers[1]);
+             if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
+          }
         }
       }
     }
@@ -277,14 +322,21 @@ const App: React.FC = () => {
       const data1 = await res1.json();
       const data2 = res2 ? await res2.json() : null;
       const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
+      
+      const reference = search.label || (search.startVerse 
+        ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}` 
+        : `${bookZh} ${search.chapter}`);
+
       setBibleData({
-        reference: `${bookZh} ${search.chapter}`,
+        reference,
         bookCode: search.book,
         chapter: search.chapter,
+        startVerse: search.startVerse,
+        endVerse: search.endVerse,
         verses: data1.map((v: any) => ({ verse: v.verse, text: v.text ? v.text.replace(/<[^>]*>/g, '').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim() : "" }))
       });
       setParallelData(data2 ? data2.map((v: any) => ({ verse: v.verse, text: v.text ? v.text.replace(/<[^>]*>/g, '').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim() : "" })) : null);
-      setInput(`${bookZh} ${search.chapter}`);
+      setInput(reference);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) { 
       setError(err.message); 
@@ -303,7 +355,7 @@ const App: React.FC = () => {
 
   const markCurrentAsRead = () => {
     if (!bibleData) return;
-    const currentId = `${bibleData.bookCode}${bibleData.chapter}`;
+    const currentId = `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
     if (!settings.completedTasks.includes(currentId)) {
       toggleTask(currentId);
       showToast(`已完成：${bibleData.reference}！`);
@@ -315,7 +367,6 @@ const App: React.FC = () => {
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
   };
 
-  // --- Calendar Generator ---
   const calendarDays = useMemo(() => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
@@ -363,7 +414,13 @@ const App: React.FC = () => {
     if (plan.length > 0) {
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0];
-      fetchBible({ book: targetItem.book, chapter: targetItem.chapter });
+      fetchBible({ 
+        book: targetItem.book, 
+        chapter: targetItem.chapter, 
+        startVerse: targetItem.startVerse, 
+        endVerse: targetItem.endVerse, 
+        label: targetItem.label 
+      });
     }
   };
 
@@ -385,9 +442,24 @@ const App: React.FC = () => {
     setCurrentViewDate(new Date(y, currentViewDate.getMonth(), 1));
   };
 
+  const filteredVerses = useMemo(() => {
+    if (!bibleData) return [];
+    if (!bibleData.startVerse) return bibleData.verses;
+    const start = bibleData.startVerse;
+    const end = bibleData.endVerse || start;
+    return bibleData.verses.filter(v => v.verse >= start && v.verse <= end);
+  }, [bibleData]);
+
+  const filteredParallel = useMemo(() => {
+    if (!bibleData || !parallelData) return null;
+    if (!bibleData.startVerse) return parallelData;
+    const start = bibleData.startVerse;
+    const end = bibleData.endVerse || start;
+    return parallelData.filter(v => v.verse >= start && v.verse <= end);
+  }, [bibleData, parallelData]);
+
   return (
     <div className={`min-h-screen transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
-      {/* Toast */}
       {toast.show && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
           {toast.type === 'success' ? <PartyPopper size={20} /> : <Info size={20} />}
@@ -395,7 +467,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Navigation */}
       <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 transition-colors duration-500 ${themes[settings.theme]}`}>
         <div className="flex items-center gap-3">
           <BookOpen className="text-indigo-600" size={24} />
@@ -426,7 +497,6 @@ const App: React.FC = () => {
       </nav>
 
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        {/* Sidebar Navigation */}
         <aside className="lg:col-span-1 space-y-6">
           <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-500 ${themes[settings.theme]}`}>
             <div className="flex items-center justify-between mb-4">
@@ -583,7 +653,7 @@ const App: React.FC = () => {
                       <button 
                         key={item.id} 
                         className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} 
-                        onClick={() => fetchBible({ book: item.book, chapter: item.chapter })}
+                        onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label })}
                       >
                         <span className={`text-sm font-bold truncate ${settings.completedTasks.includes(item.id) ? 'line-through opacity-30 italic' : ''}`}>{item.label}</span>
                         <div onClick={(e) => { e.stopPropagation(); toggleTask(item.id); }} className={`p-1 ${settings.completedTasks.includes(item.id) ? 'text-green-500' : 'text-slate-300 hover:text-indigo-400'} transition-colors cursor-pointer`}>
@@ -603,7 +673,6 @@ const App: React.FC = () => {
           </section>
         </aside>
 
-        {/* Main Content Area */}
         <main className="lg:col-span-3">
           {loading ? (
             <LoadingView theme={settings.theme} />
@@ -628,30 +697,29 @@ const App: React.FC = () => {
               </div>
               <div className="p-8 md:p-20 pb-32">
                 <div className={`grid gap-x-20 gap-y-16 ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px` }}>
-                  {bibleData.verses.map((v, i) => (
+                  {filteredVerses.map((v, i) => (
                     <React.Fragment key={i}>
                       <div className="flex gap-8 items-start group">
                         <span className="text-[0.55em] font-black text-indigo-500/20 w-8 text-right mt-3 shrink-0 group-hover:text-indigo-500 transition-colors">{v.verse}</span>
                         <div className="leading-relaxed font-serif whitespace-pre-wrap">{v.text}</div>
                       </div>
-                      {parallelData && parallelData[i] && (
+                      {filteredParallel && filteredParallel[i] && (
                         <div className="flex gap-8 items-start border-l-4 pl-10 border-indigo-500/5 bg-indigo-500/[0.01] rounded-r-3xl py-2">
-                          <span className="text-[0.55em] font-black text-emerald-500/20 w-8 text-right mt-3 shrink-0">{parallelData[i].verse}</span>
-                          <div className="leading-relaxed font-serif opacity-70 italic whitespace-pre-wrap text-[0.95em]">{parallelData[i].text}</div>
+                          <span className="text-[0.55em] font-black text-emerald-500/20 w-8 text-right mt-3 shrink-0">{filteredParallel[i].verse}</span>
+                          <div className="leading-relaxed font-serif opacity-70 italic whitespace-pre-wrap text-[0.95em]">{filteredParallel[i].text}</div>
                         </div>
                       )}
                     </React.Fragment>
                   ))}
                 </div>
 
-                {/* Footer Actions */}
                 <div className="mt-40 border-t pt-24 text-center space-y-12">
                   <button 
                     onClick={markCurrentAsRead} 
-                    className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}
+                    className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}
                   >
-                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}`) ? <CheckCircle2 size={36}/> : <PartyPopper size={36}/>}
-                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}`) ? "今日已讀" : "讀完了！"}
+                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? <CheckCircle2 size={36}/> : <PartyPopper size={36}/>}
+                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? "今日已讀" : "讀完了！"}
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-6">
@@ -665,7 +733,7 @@ const App: React.FC = () => {
                     {navStatus.inPlan ? (
                       navStatus.nextItem && (
                         <button 
-                          onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter })}
+                          onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label })}
                           className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all"
                         >
                           繼續讀經 <ChevronRightIcon size={20}/>
@@ -697,7 +765,6 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      {/* Version Picker Modal */}
       {showVersionPicker.active && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl animate-in fade-in duration-300">
           <div className={`w-full max-w-2xl max-h-[85vh] rounded-[3.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border-2 animate-in zoom-in-95 duration-300 transition-colors duration-500 ${themes[settings.theme]}`}>
@@ -732,7 +799,7 @@ const App: React.FC = () => {
                       
                       if (bibleData) {
                         fetchBible(
-                          { book: bibleData.bookCode, chapter: bibleData.chapter },
+                          { book: bibleData.bookCode, chapter: bibleData.chapter, startVerse: bibleData.startVerse, endVerse: bibleData.endVerse, label: bibleData.reference },
                           updated.primaryVersion,
                           updated.secondaryVersion
                         );
