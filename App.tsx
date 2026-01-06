@@ -13,6 +13,54 @@ import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme 
 } from './types';
 
+const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => (
+  <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in duration-500">
+    <div className="relative">
+      <div className="bg-white dark:bg-slate-800 p-8 rounded-full shadow-2xl border-4 border-indigo-50/50 dark:border-white/5 relative z-10">
+        <BookOpen className="text-indigo-600 animate-pulse" size={48} />
+      </div>
+      {/* Subtle background glow instead of ping */}
+      <div className="absolute inset-0 bg-indigo-400/20 blur-2xl rounded-full scale-110 animate-pulse"></div>
+    </div>
+    <p className="mt-10 text-xs font-black uppercase tracking-[0.3em] text-indigo-600/60 animate-pulse">
+      正在開啟聖經卷軸
+    </p>
+  </div>
+);
+
+const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => (
+  <div className="flex flex-col items-center justify-center h-[75vh] text-center p-10 animate-in fade-in zoom-in-95 duration-700">
+    <div className="relative mb-12">
+      {/* Single focused icon container */}
+      <div className={`p-10 rounded-[3rem] transition-colors duration-500 ${
+        theme === 'dark' ? 'bg-white/5' : theme === 'sepia' ? 'bg-[#5b4636]/5' : 'bg-indigo-50'
+      }`}>
+        <BookOpen 
+          size={84} 
+          strokeWidth={1.5}
+          className={`transition-colors duration-500 ${
+            theme === 'dark' ? 'text-white/30' : theme === 'sepia' ? 'text-[#5b4636]/40' : 'text-indigo-600/40'
+          }`} 
+        />
+      </div>
+      {/* Subtle abstract background element */}
+      <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
+      <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
+    </div>
+    <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-30 ${
+      theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
+    }`}>
+      讀經從此刻開始
+    </h3>
+    <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${
+      theme === 'dark' ? 'text-white/30' : 'text-slate-400'
+    }`}>
+      選擇左側日曆中的日期或搜尋書卷，<br />
+      開啟您與真理的對話空間。
+    </p>
+  </div>
+);
+
 const App: React.FC = () => {
   // --- States ---
   const [settings, setSettings] = useState<AppSettings>({
@@ -97,7 +145,7 @@ const App: React.FC = () => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const updated = { ...settings, [key]: value };
     saveSettings(updated);
-    return updated; // Return updated object to use immediately
+    return updated; 
   };
 
   // --- Helpers ---
@@ -166,7 +214,6 @@ const App: React.FC = () => {
     };
   }, [bibleData, parsedSchedule]);
 
-  // Enhanced fetchBible to support custom versions (useful for immediate re-fetch on switch)
   const fetchBible = async (
     refInfo: { book: string, chapter: number } | null = null, 
     customPrimary?: string, 
@@ -284,9 +331,8 @@ const App: React.FC = () => {
     setSelectedDate(dateKey);
     const plan = getDayPlan(dateKey);
     if (plan.length > 0) {
-      // Find first uncompleted task
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
-      const targetItem = firstUncompleted || plan[0]; // If all completed, open the first one
+      const targetItem = firstUncompleted || plan[0];
       fetchBible({ book: targetItem.book, chapter: targetItem.chapter });
     }
   };
@@ -310,7 +356,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 font-sans ${bodyBg[settings.theme]}`}>
+    <div className={`min-h-screen transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
       {/* Toast */}
       {toast.show && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
@@ -320,7 +366,7 @@ const App: React.FC = () => {
       )}
 
       {/* Navigation */}
-      <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 ${themes[settings.theme]}`}>
+      <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 transition-colors duration-500 ${themes[settings.theme]}`}>
         <div className="flex items-center gap-3">
           <BookOpen className="text-indigo-600" size={24} />
           <h1 className="text-lg font-bold text-indigo-600 hidden sm:block tracking-tight">2026 每日讀經</h1>
@@ -352,7 +398,7 @@ const App: React.FC = () => {
       <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Sidebar Navigation */}
         <aside className="lg:col-span-1 space-y-6">
-          <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-300 ${themes[settings.theme]}`}>
+          <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-500 ${themes[settings.theme]}`}>
             <div className="flex items-center justify-between mb-4">
               <button 
                 onClick={() => setIsScheduleExpanded(!isScheduleExpanded)}
@@ -530,13 +576,13 @@ const App: React.FC = () => {
         {/* Main Content Area */}
         <main className="lg:col-span-3">
           {loading ? (
-            <div className="flex flex-col items-center justify-center h-[60vh]"><RefreshCw className="animate-spin text-indigo-600" size={48} /></div>
+            <LoadingView theme={settings.theme} />
           ) : error ? (
             <div className="bg-rose-500/10 border-2 border-rose-500/20 text-rose-500 p-8 rounded-[2.5rem] flex gap-4 animate-in shake duration-500">
               <AlertCircle size={24}/><p className="font-bold">{error}</p>
             </div>
           ) : bibleData ? (
-            <div className={`rounded-[2.5rem] border-2 overflow-hidden shadow-2xl shadow-indigo-100/10 ${themes[settings.theme]}`}>
+            <div className={`rounded-[2.5rem] border-2 overflow-hidden shadow-2xl shadow-indigo-100/10 transition-colors duration-500 animate-in fade-in duration-700 ${themes[settings.theme]}`}>
               <div className="px-8 md:px-12 py-10 border-b flex items-center justify-between bg-black/[0.01]">
                 <div>
                   <h2 className="text-4xl font-black tracking-tight">{bibleData.reference}</h2>
@@ -579,7 +625,6 @@ const App: React.FC = () => {
                   </button>
 
                   <div className="flex flex-wrap items-center justify-center gap-6">
-                    {/* Consistent UI navigation buttons */}
                     <button 
                       onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
                       className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"
@@ -617,14 +662,7 @@ const App: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[70vh] text-center p-10">
-              <div className="relative mb-10">
-                <History size={160} className="opacity-[0.03]" />
-                <BookOpen size={64} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-600/20" />
-              </div>
-              <h3 className="text-3xl font-black opacity-20 tracking-tight mb-4">靈修從此刻開始</h3>
-              <p className="max-w-md text-slate-400 font-medium leading-relaxed">選擇左側日曆中的日期或搜尋書卷，開啟您與真理的對話空間。</p>
-            </div>
+            <EmptyState theme={settings.theme} />
           )}
         </main>
       </div>
@@ -632,7 +670,7 @@ const App: React.FC = () => {
       {/* Version Picker Modal */}
       {showVersionPicker.active && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className={`w-full max-w-2xl max-h-[85vh] rounded-[3.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border-2 animate-in zoom-in-95 duration-300 ${themes[settings.theme]}`}>
+          <div className={`w-full max-w-2xl max-h-[85vh] rounded-[3.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border-2 animate-in zoom-in-95 duration-300 transition-colors duration-500 ${themes[settings.theme]}`}>
             <div className="p-12 border-b bg-black/[0.01]">
               <div className="flex items-center justify-between mb-10">
                 <div>
@@ -662,7 +700,6 @@ const App: React.FC = () => {
                       const updated = updateSetting(isPrimary ? 'primaryVersion' : 'secondaryVersion', ver.id);
                       setShowVersionPicker({ ...showVersionPicker, active: false });
                       
-                      // Auto-apply to current viewing chapter
                       if (bibleData) {
                         fetchBible(
                           { book: bibleData.bookCode, chapter: bibleData.chapter },
