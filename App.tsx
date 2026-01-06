@@ -323,7 +323,7 @@ const App: React.FC = () => {
       <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 ${themes[settings.theme]}`}>
         <div className="flex items-center gap-3">
           <BookOpen className="text-indigo-600" size={24} />
-          <h1 className="text-lg font-bold text-indigo-600 hidden sm:block tracking-tight">2026 聖經靈修助手</h1>
+          <h1 className="text-lg font-bold text-indigo-600 hidden sm:block tracking-tight">2026 每日讀經</h1>
         </div>
         <div className="flex items-center gap-2 flex-1 max-md:max-w-none max-w-md">
           <div className="relative flex-1">
