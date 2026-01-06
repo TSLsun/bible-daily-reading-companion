@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   BookOpen, Search, History, Check, Calendar as CalendarIcon, CheckCircle2, 
@@ -13,16 +14,16 @@ import {
 } from './types';
 
 const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => {
-  const containerClasses = {
-    light: "bg-white border-indigo-50/50 shadow-indigo-100",
-    sepia: "bg-[#fcf5e5] border-[#eaddc0]/50 shadow-[#d9c5a0]/20",
-    dark: "bg-[#1e1e1e] border-white/5 shadow-black/40"
+  const containerBg = {
+    light: "bg-indigo-50 border-indigo-100",
+    sepia: "bg-[#f4ecd8] border-[#eaddc0]",
+    dark: "bg-white/5 border-white/5"
   };
 
-  const glowClasses = {
-    light: "bg-indigo-400/20",
-    sepia: "bg-amber-400/15",
-    dark: "bg-indigo-500/10"
+  const iconColor = {
+    light: "text-indigo-600",
+    sepia: "text-[#5b4636]",
+    dark: "text-indigo-400"
   };
 
   const textClasses = {
@@ -32,53 +33,63 @@ const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[60vh] animate-in fade-in duration-500">
-      <div className="relative">
-        <div className={`p-8 rounded-full shadow-2xl border-4 relative z-10 transition-colors duration-500 ${containerClasses[theme]}`}>
-          <BookOpen 
-            className={`animate-pulse transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} 
-            size={48} 
-          />
+    <div className="flex flex-col items-center justify-center h-[75vh] animate-in fade-in duration-500">
+      <div className="relative mb-12">
+        <div className={`p-10 rounded-[3rem] border-2 shadow-2xl relative z-10 animate-pulse transition-all duration-500 ${containerBg[theme]}`}>
+          <BookOpen className={`transition-colors duration-500 ${iconColor[theme]}`} size={64} />
         </div>
-        <div className={`absolute inset-0 blur-2xl rounded-full scale-110 animate-pulse transition-colors duration-500 ${glowClasses[theme]}`}></div>
+        {/* Consistent Glow Spots */}
+        <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/20 rounded-full blur-xl animate-pulse"></div>
+        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
       </div>
-      <p className={`mt-10 text-xs font-black uppercase tracking-[0.3em] animate-pulse transition-colors duration-500 ${textClasses[theme]}`}>
+      <p className={`text-xs font-black uppercase tracking-[0.3em] animate-pulse transition-colors duration-500 ${textClasses[theme]}`}>
         正在開啟聖經卷軸
       </p>
     </div>
   );
 };
 
-const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => (
-  <div className="flex flex-col items-center justify-center h-[75vh] text-center p-10 animate-in fade-in zoom-in-95 duration-700">
-    <div className="relative mb-12">
-      <div className={`p-10 rounded-[3rem] transition-colors duration-500 ${
-        theme === 'dark' ? 'bg-white/5' : theme === 'sepia' ? 'bg-[#5b4636]/5' : 'bg-indigo-50'
-      }`}>
-        <BookOpen 
-          size={84} 
-          strokeWidth={1.5}
-          className={`transition-colors duration-500 ${
-            theme === 'dark' ? 'text-white/30' : theme === 'sepia' ? 'text-[#5b4636]/40' : 'text-indigo-600/40'
-          }`} 
-        />
+const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
+  const containerBg = {
+    light: "bg-indigo-50 border-indigo-100",
+    sepia: "bg-[#f4ecd8] border-[#eaddc0]",
+    dark: "bg-white/5 border-white/5"
+  };
+
+  const iconColor = {
+    light: "text-indigo-600/40",
+    sepia: "text-[#5b4636]/40",
+    dark: "text-white/20"
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-[75vh] text-center p-10 animate-in fade-in zoom-in-95 duration-700">
+      <div className="relative mb-12">
+        <div className={`p-10 rounded-[3rem] border-2 transition-all duration-500 ${containerBg[theme]}`}>
+          <BookOpen 
+            size={84} 
+            strokeWidth={1.5}
+            className={`transition-colors duration-500 ${iconColor[theme]}`} 
+          />
+        </div>
+        {/* Matching Glow Spots */}
+        <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
+        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
       </div>
-      <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
-      <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
+      <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-50 ${
+        theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
+      }`}>
+        靈修從此刻開始
+      </h3>
+      <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${
+        theme === 'dark' ? 'text-white/30' : 'text-slate-400'
+      }`}>
+        選擇左側日曆中的日期或搜尋書卷，<br />
+        開啟您與真理的對話空間。
+      </p>
     </div>
-    <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-30 ${
-      theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
-    }`}>
-      靈修從此刻開始
-    </h3>
-    <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${
-      theme === 'dark' ? 'text-white/30' : 'text-slate-400'
-    }`}>
-      選擇左側日曆中的日期或搜尋書卷，<br />
-      開啟您與真理的對話空間。
-    </p>
-  </div>
-);
+  );
+};
 
 const App: React.FC = () => {
   // --- States ---
