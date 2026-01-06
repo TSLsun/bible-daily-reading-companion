@@ -137,7 +137,7 @@ const App: React.FC = () => {
     return items;
   };
 
-  const getDayPlan = useCallback((dateKey: string) => {
+  const getDayPlan = useCallback((dateKey: string): ScheduleItem[] => {
     try {
       const json = JSON.parse(settings.dailyScheduleJson);
       const sourceText = json[dateKey] || "";
@@ -157,7 +157,7 @@ const App: React.FC = () => {
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
     const currentId = `${bibleData.bookCode}${bibleData.chapter}`;
-    const currentIndex = parsedSchedule.findIndex(item => item.id === currentId);
+    const currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentId);
     
     return {
       inPlan: currentIndex !== -1,
@@ -255,7 +255,7 @@ const App: React.FC = () => {
       const dateKey = `${mm}-${dd}`;
       const plan = getDayPlan(dateKey);
       const hasPlan = plan.length > 0;
-      const completedCount = plan.filter(p => settings.completedTasks.includes(p.id)).length;
+      const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
       const isFullyCompleted = hasPlan && completedCount === plan.length;
       const progress = hasPlan ? (completedCount / plan.length) : 0;
       days.push({ day: i, dateKey, hasPlan, isFullyCompleted, progress });
@@ -285,7 +285,7 @@ const App: React.FC = () => {
     const plan = getDayPlan(dateKey);
     if (plan.length > 0) {
       // Find first uncompleted task
-      const firstUncompleted = plan.find(item => !settings.completedTasks.includes(item.id));
+      const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0]; // If all completed, open the first one
       fetchBible({ book: targetItem.book, chapter: targetItem.chapter });
     }
@@ -503,7 +503,7 @@ const App: React.FC = () => {
                     <div className="mb-2 px-1">
                       <span className="text-[10px] font-black uppercase text-indigo-600/50">{settings.scheduleMode === 'daily' ? `${selectedDate} 的章節` : '所有章節'}</span>
                     </div>
-                    {parsedSchedule.length > 0 ? parsedSchedule.map((item) => (
+                    {parsedSchedule.length > 0 ? parsedSchedule.map((item: ScheduleItem) => (
                       <button 
                         key={item.id} 
                         className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} 
