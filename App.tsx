@@ -677,26 +677,29 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <footer className={`mt-24 py-16 border-t transition-colors duration-500 ${
-        settings.theme === 'dark' ? 'border-white/5 text-white/40' : 
-        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/60' : 
-        'border-slate-200/60 text-slate-400'
+      <footer className={`mt-24 py-20 border-t transition-colors duration-500 ${
+        settings.theme === 'dark' ? 'border-white/5 text-white/30' : 
+        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/50' : 
+        'border-slate-200/40 text-slate-400/80'
       }`}>
-        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
-          <h4 className={`text-sm font-semibold ${
-            settings.theme === 'dark' ? 'text-white/60' : 
-            settings.theme === 'sepia' ? 'text-[#5b4636]/80' : 
-            'text-slate-600'
-          }`}>資料來源與版權聲明</h4>
+        <div className="max-w-3xl mx-auto px-6 text-center space-y-8">
+          <div className="space-y-2">
+            <h4 className={`text-xs font-black uppercase tracking-widest ${
+              settings.theme === 'dark' ? 'text-white/40' : 
+              settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 
+              'text-slate-500'
+            }`}>資料來源與版權聲明</h4>
+            <div className={`h-1 w-8 mx-auto rounded-full ${settings.theme === 'dark' ? 'bg-white/5' : 'bg-slate-200'}`} />
+          </div>
           
-          <div className="text-xs space-y-4 leading-relaxed opacity-80">
+          <div className="text-[11px] space-y-4 leading-loose font-medium opacity-60">
             <p>
               本站聖經經文與研經資料，取自
               <br className="sm:hidden" />
               信望愛（FHL）聖經資料庫所提供之公開 API
               <br />
               資料來源：
-              <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2">
+              <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">
                 https://bible.fhl.net
               </a>
             </p>
@@ -706,17 +709,17 @@ const App: React.FC = () => {
             <p>
               信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。
               <br />
-              若您對完整資料或研經工具有興趣，請造訪<a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2">信望愛官方網站</a>。
+              若您對完整資料或研經工具有興趣，請造訪 <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">信望愛官方網站</a>。
             </p>
           </div>
 
-          <p className={`text-[11px] pt-8 opacity-60 ${
-            settings.theme === 'dark' ? 'text-white/30' : 
-            settings.theme === 'sepia' ? 'text-[#5b4636]/40' : 
+          <div className={`pt-8 border-t border-transparent text-[10px] italic opacity-40 ${
+            settings.theme === 'dark' ? 'text-white/20' : 
+            settings.theme === 'sepia' ? 'text-[#5b4636]/30' : 
             'text-slate-400'
           }`}>
             本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。
-          </p>
+          </div>
         </div>
       </footer>
 
