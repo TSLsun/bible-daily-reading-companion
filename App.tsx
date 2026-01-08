@@ -794,6 +794,46 @@ const App: React.FC = () => {
         </main>
       </div>
 
+      <footer className={`mt-24 py-16 border-t transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 text-white/40' :
+          settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/60' :
+            'border-slate-200/60 text-slate-400'
+        }`}>
+        <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
+          <h4 className={`text-sm font-semibold ${settings.theme === 'dark' ? 'text-white/60' :
+              settings.theme === 'sepia' ? 'text-[#5b4636]/80' :
+                'text-slate-600'
+            }`}>資料來源與版權聲明</h4>
+
+          <div className="text-xs space-y-4 leading-relaxed opacity-80">
+            <p>
+              本站聖經經文與研經資料，取自
+              <br className="sm:hidden" />
+              信望愛（FHL）聖經資料庫所提供之公開 API
+              <br />
+              資料來源：
+              <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2">
+                https://bible.fhl.net
+              </a>
+            </p>
+
+            <p>各聖經譯本之著作權分屬原著作權人所有，本站僅透過 API 即時呈現相關內容，僅供閱讀與學習使用。</p>
+
+            <p>
+              信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。
+              <br />
+              若您對完整資料或研經工具有興趣，請造訪<a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2">信望愛官方網站</a>。
+            </p>
+          </div>
+
+          <p className={`text-[11px] pt-8 opacity-60 ${settings.theme === 'dark' ? 'text-white/30' :
+              settings.theme === 'sepia' ? 'text-[#5b4636]/40' :
+                'text-slate-400'
+            }`}>
+            本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。
+          </p>
+        </div>
+      </footer>
+
       {showVersionPicker.active && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl animate-in fade-in duration-300">
           <div className={`w-full max-w-2xl max-h-[85vh] rounded-[3.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border-2 animate-in zoom-in-95 duration-300 transition-colors duration-500 ${themes[settings.theme]}`}>
