@@ -141,7 +141,6 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Validate saved versions against available versions to handle migration
         const validIds = FALLBACK_VERSIONS.map(v => v.id);
         if (parsed.primaryVersion && !validIds.includes(parsed.primaryVersion)) {
            parsed.primaryVersion = 'unv';
@@ -199,10 +198,8 @@ const App: React.FC = () => {
     const bookInfo = findBookCode(line);
     if (!bookInfo) return items;
 
-    // Remove book name from string to parse numbers
     const remaining = line.replace(bookInfo.zh, "").replace(Object.keys(BIBLE_ALIASES).find(a => line.startsWith(a)) || "", "").trim();
     
-    // Check for colon (verse range)
     if (remaining.includes(':')) {
       const parts = remaining.split(':');
       const chapter = parseInt(parts[0].trim());
@@ -228,16 +225,8 @@ const App: React.FC = () => {
       const label = startVerse ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}` : `${bookInfo.zh} ${chapter}`;
       const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
       
-      items.push({ 
-        label, 
-        book: bookInfo.en, 
-        chapter, 
-        id, 
-        startVerse, 
-        endVerse 
-      });
+      items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
     } else {
-      // Chapter range or single chapter
       const numbers = remaining.match(/\d+/g);
       if (numbers) {
         if (remaining.includes('-') && numbers.length >= 2) {
@@ -280,7 +269,6 @@ const App: React.FC = () => {
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
     const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
     
-    // First try to match full ID (including verses), then fallback to chapter-only ID if it's a generic chapter navigation
     let currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentFullId);
     if (currentIndex === -1) {
         currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
@@ -323,15 +311,11 @@ const App: React.FC = () => {
     setError('');
 
     const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
-    // We use search.book (English code) to query to avoid encoding issues with Chinese characters in URL
     const qstr = `${search.book}${search.chapter}`;
 
     try {
       const fetchVersion = async (ver: string) => {
         const res = await fetch(`https://bible.fhl.net/json/qsb.php?qstr=${encodeURIComponent(qstr)}&version=${ver}&strong=0&gb=0`);
-        
-        // FHL API returns Content-Type: text/html; charset=big5 header and Big5 body when gb=0.
-        // We must manually decode as Big5 to read the Chinese text correctly.
         const buffer = await res.arrayBuffer();
         const decoder = new TextDecoder("big5");
         const text = decoder.decode(buffer);
@@ -488,7 +472,7 @@ const App: React.FC = () => {
   }, [bibleData, parallelData]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
       {toast.show && (
         <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
           {toast.type === 'success' ? <PartyPopper size={20} /> : <Info size={20} />}
@@ -525,7 +509,7 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="flex-1 w-full max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
         <aside className="lg:col-span-1 space-y-6">
           <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-500 ${themes[settings.theme]}`}>
             <div className="flex items-center justify-between mb-4">
@@ -537,20 +521,8 @@ const App: React.FC = () => {
                 {settings.scheduleMode === 'daily' ? '每日計劃' : '讀經清單'}
               </button>
               <div className="flex gap-1">
-                <button 
-                  onClick={goToTodayInPlan}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                  title="回到今天 (2026)"
-                >
-                  <Target size={16} />
-                </button>
-                <button 
-                  onClick={() => setIsEditingSchedule(!isEditingSchedule)} 
-                  className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`}
-                  title="編輯計劃"
-                >
-                  <Settings size={16}/>
-                </button>
+                <button onClick={goToTodayInPlan} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="回到今天 (2026)"><Target size={16} /></button>
+                <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16}/></button>
               </div>
             </div>
 
@@ -560,22 +532,13 @@ const App: React.FC = () => {
                   <div className="mb-6">
                     <div className="relative flex items-center justify-between mb-4 px-1">
                       <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronLeft size={16}/></button>
-                      
-                      <button 
-                        onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
-                        className="flex items-center gap-1.5 font-bold text-sm tracking-tight px-3 py-1.5 hover:bg-black/5 rounded-xl transition-all active:scale-95"
-                      >
+                      <button onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="flex items-center gap-1.5 font-bold text-sm tracking-tight px-3 py-1.5 hover:bg-black/5 rounded-xl transition-all active:scale-95">
                         {currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月
                         <ChevronDown size={14} className={`transition-transform duration-200 ${isMonthPickerOpen ? 'rotate-180' : ''}`} />
                       </button>
-
                       <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronRight size={16}/></button>
-
                       {isMonthPickerOpen && (
-                        <div 
-                          ref={monthPickerRef}
-                          className={`absolute top-full left-1/2 -translate-x-1/2 z-50 mt-2 w-64 p-4 rounded-2xl shadow-2xl border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}
-                        >
+                        <div ref={monthPickerRef} className={`absolute top-full left-1/2 -translate-x-1/2 z-50 mt-2 w-64 p-4 rounded-2xl shadow-2xl border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}>
                           <div className="flex items-center justify-between mb-4 border-b pb-2">
                             <button onClick={() => handleYearSelect(currentViewDate.getFullYear() - 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronLeft size={14}/></button>
                             <span className="font-black text-sm">{currentViewDate.getFullYear()}</span>
@@ -583,57 +546,25 @@ const App: React.FC = () => {
                           </div>
                           <div className="grid grid-cols-3 gap-2">
                             {[0,1,2,3,4,5,6,7,8,9,10,11].map(m => (
-                              <button 
-                                key={m}
-                                onClick={() => handleMonthSelect(m)}
-                                className={`py-2 rounded-xl text-xs font-bold transition-all ${
-                                  currentViewDate.getMonth() === m 
-                                    ? 'bg-indigo-600 text-white' 
-                                    : 'hover:bg-black/5'
-                                }`}
-                              >
-                                {m + 1}月
-                              </button>
+                              <button key={m} onClick={() => handleMonthSelect(m)} className={`py-2 rounded-xl text-xs font-bold transition-all ${currentViewDate.getMonth() === m ? 'bg-indigo-600 text-white' : 'hover:bg-black/5'}`}>{m + 1}月</button>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
-                    
                     <div className="grid grid-cols-7 gap-1 text-[10px] uppercase font-black opacity-30 text-center mb-2">
                       {['日','一','二','三','四','五','六'].map(d => <div key={d}>{d}</div>)}
                     </div>
-
                     <div className="grid grid-cols-7 gap-1.5">
                       {calendarDays.map((d, idx) => {
                         if (!d) return <div key={`empty-${idx}`} className="aspect-square"></div>;
                         const isSelected = d.dateKey === selectedDate;
                         const today = new Date();
                         const isActuallyToday = today.getFullYear() === PLAN_YEAR && d.dateKey === `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                        
                         return (
-                          <button 
-                            key={d.dateKey}
-                            onClick={() => handleDayClick(d.dateKey)}
-                            className={`
-                              relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all group
-                              ${isSelected ? 'bg-indigo-600 text-white shadow-md z-10' : 'hover:bg-black/5'}
-                              ${isActuallyToday && !isSelected ? 'ring-2 ring-indigo-500/30' : ''}
-                              ${!d.hasPlan && !isSelected ? 'opacity-20' : ''}
-                            `}
-                          >
+                          <button key={d.dateKey} onClick={() => handleDayClick(d.dateKey)} className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all group ${isSelected ? 'bg-indigo-600 text-white shadow-md z-10' : 'hover:bg-black/5'} ${isActuallyToday && !isSelected ? 'ring-2 ring-indigo-500/30' : ''} ${!d.hasPlan && !isSelected ? 'opacity-20' : ''}`}>
                             {d.day}
-                            {d.hasPlan && (
-                              <div className={`absolute bottom-1.5 h-1 w-1 rounded-full transition-colors ${
-                                isSelected 
-                                  ? 'bg-white' 
-                                  : d.isFullyCompleted 
-                                    ? 'bg-green-500' 
-                                    : d.progress > 0 
-                                      ? 'bg-amber-500' 
-                                      : 'bg-slate-300'
-                              }`} />
-                            )}
+                            {d.hasPlan && <div className={`absolute bottom-1.5 h-1 w-1 rounded-full transition-colors ${isSelected ? 'bg-white' : d.isFullyCompleted ? 'bg-green-500' : d.progress > 0 ? 'bg-amber-500' : 'bg-slate-300'}`} />}
                           </button>
                         );
                       })}
@@ -648,30 +579,11 @@ const App: React.FC = () => {
                        <button onClick={() => updateSetting('scheduleMode', 'daily')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'daily' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>每日 (JSON)</button>
                     </div>
                     {settings.scheduleMode === 'static' ? (
-                      <textarea 
-                        className="w-full h-80 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none"
-                        value={settings.scheduleText}
-                        onChange={(e) => setSettings({...settings, scheduleText: e.target.value})}
-                        placeholder="格式：馬太 1-3"
-                      />
+                      <textarea className="w-full h-80 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({...settings, scheduleText: e.target.value})} placeholder="格式：馬太 1-3" />
                     ) : (
-                      <textarea 
-                        className="w-full h-80 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none"
-                        value={settings.dailyScheduleJson}
-                        onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})}
-                        placeholder='{"01-01": "太 1"}'
-                      />
+                      <textarea className="w-full h-80 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})} placeholder='{"01-01": "太 1"}' />
                     )}
-                    <button 
-                      onClick={() => {
-                        setIsEditingSchedule(false);
-                        saveSettings(settings);
-                        showToast("計劃已儲存");
-                      }} 
-                      className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
-                    >
-                      <Save size={18}/> 儲存並應用
-                    </button>
+                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18}/> 儲存並應用</button>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
@@ -679,11 +591,7 @@ const App: React.FC = () => {
                       <span className="text-[10px] font-black uppercase text-indigo-600/50">{settings.scheduleMode === 'daily' ? `${selectedDate} 的章節` : '所有章節'}</span>
                     </div>
                     {parsedSchedule.length > 0 ? parsedSchedule.map((item: ScheduleItem) => (
-                      <button 
-                        key={item.id} 
-                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} 
-                        onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label })}
-                      >
+                      <button key={item.id} className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label })}>
                         <span className={`text-sm font-bold truncate ${settings.completedTasks.includes(item.id) ? 'line-through opacity-30 italic' : ''}`}>{item.label}</span>
                         <div onClick={(e) => { e.stopPropagation(); toggleTask(item.id); }} className={`p-1 ${settings.completedTasks.includes(item.id) ? 'text-green-500' : 'text-slate-300 hover:text-indigo-400'} transition-colors cursor-pointer`}>
                           <CheckCircle2 size={18} fill={settings.completedTasks.includes(item.id) ? "currentColor" : "none"} />
@@ -743,45 +651,20 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="mt-40 border-t pt-24 text-center space-y-12">
-                  <button 
-                    onClick={markCurrentAsRead} 
-                    className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}
-                  >
+                  <button onClick={markCurrentAsRead} className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}>
                     {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? <CheckCircle2 size={36}/> : <PartyPopper size={36}/>}
                     {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? "今日已讀" : "讀完了！"}
                   </button>
-
                   <div className="flex flex-wrap items-center justify-center gap-6">
-                    <button 
-                      onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
-                      className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"
-                    >
-                      <ChevronUp size={18}/> 回到頂部
-                    </button>
-
+                    <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18}/> 回到頂部</button>
                     {navStatus.inPlan ? (
                       navStatus.nextItem && (
-                        <button 
-                          onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label })}
-                          className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all"
-                        >
-                          繼續讀經 <ChevronRightIcon size={20}/>
-                        </button>
+                        <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">繼續讀經 <ChevronRightIcon size={20}/></button>
                       )
                     ) : (
                       <div className="flex gap-4">
-                        <button 
-                          onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })}
-                          className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"
-                        >
-                          <ChevronLeft size={18}/> 上一章
-                        </button>
-                        <button 
-                          onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })}
-                          className="px-8 py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center gap-2 hover:bg-black transition-colors"
-                        >
-                          下一章 <ChevronRight size={18}/>
-                        </button>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"><ChevronLeft size={18}/> 上一章</button>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })} className="px-8 py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center gap-2 hover:bg-black transition-colors">下一章 <ChevronRight size={18}/></button>
                       </div>
                     )}
                   </div>
@@ -794,16 +677,18 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <footer className={`mt-24 py-16 border-t transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 text-white/40' :
-          settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/60' :
-            'border-slate-200/60 text-slate-400'
-        }`}>
+      <footer className={`mt-24 py-16 border-t transition-colors duration-500 ${
+        settings.theme === 'dark' ? 'border-white/5 text-white/40' : 
+        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/60' : 
+        'border-slate-200/60 text-slate-400'
+      }`}>
         <div className="max-w-3xl mx-auto px-6 text-center space-y-6">
-          <h4 className={`text-sm font-semibold ${settings.theme === 'dark' ? 'text-white/60' :
-              settings.theme === 'sepia' ? 'text-[#5b4636]/80' :
-                'text-slate-600'
-            }`}>資料來源與版權聲明</h4>
-
+          <h4 className={`text-sm font-semibold ${
+            settings.theme === 'dark' ? 'text-white/60' : 
+            settings.theme === 'sepia' ? 'text-[#5b4636]/80' : 
+            'text-slate-600'
+          }`}>資料來源與版權聲明</h4>
+          
           <div className="text-xs space-y-4 leading-relaxed opacity-80">
             <p>
               本站聖經經文與研經資料，取自
@@ -825,10 +710,11 @@ const App: React.FC = () => {
             </p>
           </div>
 
-          <p className={`text-[11px] pt-8 opacity-60 ${settings.theme === 'dark' ? 'text-white/30' :
-              settings.theme === 'sepia' ? 'text-[#5b4636]/40' :
-                'text-slate-400'
-            }`}>
+          <p className={`text-[11px] pt-8 opacity-60 ${
+            settings.theme === 'dark' ? 'text-white/30' : 
+            settings.theme === 'sepia' ? 'text-[#5b4636]/40' : 
+            'text-slate-400'
+          }`}>
             本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。
           </p>
         </div>
@@ -846,13 +732,7 @@ const App: React.FC = () => {
                 <button onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={32}/></button>
               </div>
               <div className="relative">
-                <input 
-                  type="text" 
-                  placeholder="搜尋譯本名稱或簡稱..." 
-                  className={`w-full px-8 py-5 rounded-[1.8rem] border-2 outline-none focus:border-indigo-500 transition-all font-bold ${settings.theme === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-slate-100 border-transparent'}`} 
-                  value={versionSearch} 
-                  onChange={(e) => setVersionSearch(e.target.value)} 
-                />
+                <input type="text" placeholder="搜尋譯本名稱或簡稱..." className={`w-full px-8 py-5 rounded-[1.8rem] border-2 outline-none focus:border-indigo-500 transition-all font-bold ${settings.theme === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-slate-100 border-transparent'}`} value={versionSearch} onChange={(e) => setVersionSearch(e.target.value)} />
                 <Search className="absolute right-6 top-1/2 -translate-y-1/2 opacity-20" size={24} />
               </div>
             </div>
@@ -865,20 +745,12 @@ const App: React.FC = () => {
                       const isPrimary = showVersionPicker.target === 'primary';
                       const updated = updateSetting(isPrimary ? 'primaryVersion' : 'secondaryVersion', ver.id);
                       setShowVersionPicker({ ...showVersionPicker, active: false });
-                      
                       if (bibleData) {
-                        fetchBible(
-                          { book: bibleData.bookCode, chapter: bibleData.chapter, startVerse: bibleData.startVerse, endVerse: bibleData.endVerse, label: bibleData.reference },
-                          updated.primaryVersion,
-                          updated.secondaryVersion
-                        );
+                        fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter, startVerse: bibleData.startVerse, endVerse: bibleData.endVerse, label: bibleData.reference }, updated.primaryVersion, updated.secondaryVersion);
                       }
                     }} className={`text-left p-6 rounded-[2rem] border-2 transition-all flex justify-between items-center group ${isActive ? 'border-indigo-600 bg-indigo-600/10' : 'bg-black/5 border-transparent hover:border-indigo-300 hover:bg-white'}`}>
                       <div className="min-w-0 pr-4">
-                        <div className="font-black text-indigo-600 text-lg flex items-center gap-2">
-                          {ver.id} 
-                          <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{ver.lang}</span>
-                        </div>
+                        <div className="font-black text-indigo-600 text-lg flex items-center gap-2">{ver.id} <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{ver.lang}</span></div>
                         <div className="text-xs opacity-50 truncate mt-1 font-bold">{ver.name}</div>
                       </div>
                       {isActive && <CheckCircle2 size={24} className="text-indigo-600" />}
