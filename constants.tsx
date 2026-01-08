@@ -1,20 +1,20 @@
 
 export const BIBLE_BOOKS: Record<string, string> = {
-  "創世記": "Gen", "出埃及記": "Exo", "利未記": "Lev", "民數記": "Num", "申命記": "Deu",
-  "約書亞記": "Jos", "士師記": "Jdg", "路得記": "Rut", "撒母耳記上": "1Sa", "撒母耳記下": "2Sa",
+  "創世記": "Ge", "出埃及記": "Ex", "利未記": "Le", "民數記": "Nu", "申命記": "De",
+  "約書亞記": "Jos", "士師記": "Jud", "路得記": "Ru", "撒母耳記上": "1Sa", "撒母耳記下": "2Sa",
   "列王紀上": "1Ki", "列王紀下": "2Ki", "歷代志上": "1Ch", "歷代志下": "2Ch",
-  "以斯拉記": "Ezr", "尼希米記": "Neh", "以斯帖記": "Est", "約伯記": "Job", "詩篇": "Psa",
-  "箴言": "Pro", "傳道書": "Ecc", "雅歌": "Sng", "以賽亞書": "Isa",
-  "耶利米書": "Jer", "耶利米哀歌": "Lam", "以西結書": "Ezk", "但以理書": "Dan",
-  "何西阿書": "Hos", "約珥書": "Jol", "阿摩司書": "Ams", "俄巴底亞書": "Oba", "約拿書": "Jon",
-  "彌迦書": "Mic", "那鴻書": "Nam", "哈巴谷書": "Hab", "西番雅書": "Zep", "哈該書": "Hag",
-  "撒迦利亞書": "Zec", "瑪拉基書": "Mal", "馬太福音": "Mat", "馬可福音": "Mrk",
-  "路加福音": "Luk", "約翰福音": "Jhn", "使徒行傳": "Act", "羅馬書": "Rom", "哥林多前書": "1Co",
-  "哥利多後書": "2Co", "加拉太書": "Gal", "以弗所書": "Eph", "腓立比書": "Php",
+  "以斯拉記": "Ezr", "尼希米記": "Ne", "以斯帖記": "Es", "約伯記": "Job", "詩篇": "Ps",
+  "箴言": "Pr", "傳道書": "Ec", "雅歌": "So", "以賽亞書": "Isa",
+  "耶利米書": "Jer", "耶利米哀歌": "La", "以西結書": "Eze", "但以理書": "Da",
+  "何西阿書": "Ho", "約珥書": "Joe", "阿摩司書": "Am", "俄巴底亞書": "Ob", "約拿書": "Jon",
+  "彌迦書": "Mic", "那鴻書": "Na", "哈巴谷書": "Hab", "西番雅書": "Zep", "哈該書": "Hag",
+  "撒迦利亞書": "Zec", "瑪拉基書": "Mal", "馬太福音": "Mt", "馬可福音": "Mr",
+  "路加福音": "Lu", "約翰福音": "Joh", "使徒行傳": "Ac", "羅馬書": "Ro", "哥林多前書": "1Co",
+  "哥林多後書": "2Co", "加拉太書": "Ga", "以弗所書": "Eph", "腓立比書": "Php",
   "歌羅西書": "Col", "帖撒羅尼迦前書": "1Th", "帖撒羅尼迦後書": "2Th",
   "提摩太前書": "1Ti", "提摩太後書": "2Ti", "提多書": "Tit", "腓利門書": "Phm",
   "希伯來書": "Heb", "雅各書": "Jas", "彼得前書": "1Pe", "彼得後書": "2Pe",
-  "約翰一書": "1Jn", "約翰二書": "2Jn", "約翰三書": "3Jn", "猶大書": "Jud", "啟示錄": "Rev"
+  "約翰一書": "1Jo", "約翰二書": "2Jo", "約翰三書": "3Jo", "猶大書": "Jude", "啟示錄": "Re"
 };
 
 export const BIBLE_ALIASES: Record<string, string> = {
@@ -32,16 +32,13 @@ export const BIBLE_ALIASES: Record<string, string> = {
   "西": "歌羅西書", "帖前": "帖撒羅尼迦前書", "帖後": "帖撒羅尼迦後書",
   "提前": "提摩太前書", "提後": "提摩太後書", "多": "提多書", "門": "腓利門書",
   "來": "希伯來書", "雅": "雅各書", "彼前": "彼得前書", "彼後": "彼得後書",
-  "一": "約翰一書", "二": "約翰二書", "三": "約翰三書", "猶": "猶大書", "啟": "啟示錄"
+  "約壹": "約翰一書", "約貳": "約翰二書", "約參": "約翰三書", "猶": "猶大書", "啟": "啟示錄"
 };
 
 export const FALLBACK_VERSIONS = [
-  { id: 'CUNP', name: '新標點和合本 (繁中)', lang: 'Chinese' },
-  { id: 'CUV', name: '和合本 (繁中)', lang: 'Chinese' },
-  { id: 'CNV', name: '新譯本 (繁中)', lang: 'Chinese' },
-  { id: 'ESV', name: 'English Standard Version', lang: 'English' },
-  { id: 'NIV', name: 'New International Version', lang: 'English' },
-  { id: 'KJV', name: 'King James Version', lang: 'English' }
+  { id: 'unv', name: '和合本 (FHL)', lang: 'Chinese' },
+  { id: 'kjv', name: 'King James Version', lang: 'English' },
+  { id: 'web', name: 'World English Bible', lang: 'English' }
 ];
 
 export const DEFAULT_DAILY_SCHEDULE = {

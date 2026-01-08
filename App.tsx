@@ -97,7 +97,7 @@ const App: React.FC = () => {
     completedTasks: [],
     fontSize: 18,
     theme: 'light',
-    primaryVersion: 'CUNP',
+    primaryVersion: 'unv',
     secondaryVersion: null,
     scheduleHash: ""
   });
@@ -141,6 +141,14 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        // Validate saved versions against available versions to handle migration
+        const validIds = FALLBACK_VERSIONS.map(v => v.id);
+        if (parsed.primaryVersion && !validIds.includes(parsed.primaryVersion)) {
+           parsed.primaryVersion = 'unv';
+        }
+        if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) {
+           parsed.secondaryVersion = null;
+        }
         setSettings(prev => ({ ...prev, ...parsed }));
       } catch (e) {
         console.error("Failed to load settings", e);
@@ -313,16 +321,36 @@ const App: React.FC = () => {
 
     setLoading(true);
     setError('');
+
+    const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
+    // We use search.book (English code) to query to avoid encoding issues with Chinese characters in URL
+    const qstr = `${search.book}${search.chapter}`;
+
     try {
-      const [res1, res2] = await Promise.all([
-        fetch(`https://bolls.life/get-chapter/${pVer}/${search.book}/${search.chapter}/`),
-        sVer ? fetch(`https://bolls.life/get-chapter/${sVer}/${search.book}/${search.chapter}/`) : Promise.resolve(null)
+      const fetchVersion = async (ver: string) => {
+        const res = await fetch(`https://bible.fhl.net/json/qsb.php?qstr=${encodeURIComponent(qstr)}&version=${ver}&strong=0&gb=0`);
+        
+        // FHL API returns Content-Type: text/html; charset=big5 header and Big5 body when gb=0.
+        // We must manually decode as Big5 to read the Chinese text correctly.
+        const buffer = await res.arrayBuffer();
+        const decoder = new TextDecoder("big5");
+        const text = decoder.decode(buffer);
+        const data = JSON.parse(text);
+
+        if (data.status !== 'success') {
+           throw new Error(`API Error for ${ver}: ${data.status}`);
+        }
+        return data.record.map((r: any) => ({
+          verse: r.sec,
+          text: r.bible_text
+        }));
+      };
+
+      const [data1, data2] = await Promise.all([
+        fetchVersion(pVer),
+        sVer ? fetchVersion(sVer) : Promise.resolve(null)
       ]);
-      if (!res1.ok) throw new Error("譯本載入失敗");
-      const data1 = await res1.json();
-      const data2 = res2 ? await res2.json() : null;
-      const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
-      
+
       const reference = search.label || (search.startVerse 
         ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}` 
         : `${bookZh} ${search.chapter}`);
@@ -333,13 +361,14 @@ const App: React.FC = () => {
         chapter: search.chapter,
         startVerse: search.startVerse,
         endVerse: search.endVerse,
-        verses: data1.map((v: any) => ({ verse: v.verse, text: v.text ? v.text.replace(/<[^>]*>/g, '').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim() : "" }))
+        verses: data1
       });
-      setParallelData(data2 ? data2.map((v: any) => ({ verse: v.verse, text: v.text ? v.text.replace(/<[^>]*>/g, '').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim() : "" })) : null);
+      setParallelData(data2);
       setInput(reference);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) { 
-      setError(err.message); 
+      console.error(err);
+      setError("讀取失敗，請檢查網路或稍後再試。"); 
     } finally { 
       setLoading(false); 
     }
