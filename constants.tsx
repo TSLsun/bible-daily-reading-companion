@@ -37,6 +37,7 @@ export const BIBLE_ALIASES: Record<string, string> = {
 
 export const FALLBACK_VERSIONS = [
   { id: 'unv', name: '和合本 (FHL)', lang: 'Chinese' },
+  { id: 'recover', name: '恢復本 (Recovery Version)', lang: 'Chinese' },
   { id: 'kjv', name: 'King James Version', lang: 'English' },
   { id: 'web', name: 'World English Bible', lang: 'English' }
 ];
