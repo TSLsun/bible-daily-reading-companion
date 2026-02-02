@@ -179,13 +179,16 @@ const App: React.FC = () => {
     return `${mm}-${dd}`;
   });
 
-  // 改進的自動捲動邏輯：確保 loading 結束且 bibleData 存在時才捲動
+  // 超級強化的自動捲動邏輯：確保在手機瀏覽器中精確回頂
   useEffect(() => {
     if (!loading && bibleData) {
-      // 使用 100ms 延遲確保經文已渲染並佔據高度
+      // 使用稍長的 150ms 延遲，確保內容已經完全佈局完成
       const timer = setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
+        // 多重保險：window + documentElement + body 三管齊下
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [loading, bibleData?.reference]);
@@ -494,8 +497,10 @@ const App: React.FC = () => {
   }, [bibleData, parallelData]);
 
   const handleScrollToTop = () => {
-    // 使用 documentElement 確保在所有瀏覽器都能捲動
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 強化版的主動捲動函式
+    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
   };
 
   return (
