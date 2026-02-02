@@ -4,7 +4,8 @@ import {
   BookOpen, Search, History, Check, Calendar as CalendarIcon, CheckCircle2, 
   AlertCircle, RefreshCw, Type, Sun, Moon, Coffee, X, Info, 
   PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings, 
-  FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon
+  FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
+  Download, Upload, Share2, Trash2
 } from 'lucide-react';
 import { 
   BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE 
@@ -146,6 +147,7 @@ const App: React.FC = () => {
   });
 
   const [input, setInput] = useState('');
+  const [migrationInput, setMigrationInput] = useState('');
   const [availableVersions] = useState<VersionInfo[]>(FALLBACK_VERSIONS);
   const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean, target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
   const [versionSearch, setVersionSearch] = useState('');
@@ -179,12 +181,9 @@ const App: React.FC = () => {
     return `${mm}-${dd}`;
   });
 
-  // 超級強化的自動捲動邏輯：確保在手機瀏覽器中精確回頂
   useEffect(() => {
     if (!loading && bibleData) {
-      // 使用稍長的 150ms 延遲，確保內容已經完全佈局完成
       const timer = setTimeout(() => {
-        // 多重保險：window + documentElement + body 三管齊下
         window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
         if (document.documentElement) document.documentElement.scrollTop = 0;
         if (document.body) document.body.scrollTop = 0;
@@ -407,6 +406,31 @@ const App: React.FC = () => {
     }
   };
 
+  const handleExportProgress = () => {
+    const data = JSON.stringify(settings.completedTasks);
+    navigator.clipboard.writeText(data).then(() => {
+      showToast("進度代碼已複製到剪貼簿");
+    });
+  };
+
+  const handleImportProgress = () => {
+    if (!migrationInput.trim()) return;
+    try {
+      const parsed = JSON.parse(migrationInput);
+      if (Array.isArray(parsed)) {
+        // Merge with unique values
+        const merged = Array.from(new Set([...settings.completedTasks, ...parsed]));
+        updateSetting('completedTasks', merged);
+        showToast(`匯入成功！已新增 ${merged.length - settings.completedTasks.length} 條紀錄。`);
+        setMigrationInput('');
+      } else {
+        showToast("格式錯誤，請確認貼上的內容是否正確。", "error");
+      }
+    } catch (e) {
+      showToast("解析失敗，請確認代碼完整性。", "error");
+    }
+  };
+
   const showToast = (message: string, type: string = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
@@ -497,7 +521,6 @@ const App: React.FC = () => {
   }, [bibleData, parallelData]);
 
   const handleScrollToTop = () => {
-    // 強化版的主動捲動函式
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
@@ -506,8 +529,8 @@ const App: React.FC = () => {
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
       {toast.show && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-white'}`}>
-          {toast.type === 'success' ? <PartyPopper size={20} /> : <Info size={20} />}
+        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-rose-600 text-white'}`}>
+          {toast.type === 'success' ? <PartyPopper size={20} /> : <AlertCircle size={20} />}
           <span className="font-bold">{toast.message}</span>
         </div>
       )}
@@ -606,11 +629,35 @@ const App: React.FC = () => {
                        <button onClick={() => updateSetting('scheduleMode', 'daily')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'daily' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>每日 (JSON)</button>
                     </div>
                     {settings.scheduleMode === 'static' ? (
-                      <textarea className="w-full h-80 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({...settings, scheduleText: e.target.value})} placeholder="格式：馬太 1-3" />
+                      <textarea className="w-full h-40 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({...settings, scheduleText: e.target.value})} placeholder="格式：馬太 1-3" />
                     ) : (
-                      <textarea className="w-full h-80 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})} placeholder='{"01-01": "太 1"}' />
+                      <textarea className="w-full h-40 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})} placeholder='{"01-01": "太 1"}' />
                     )}
-                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18}/> 儲存並應用</button>
+                    
+                    {/* Progress Migration Section */}
+                    <div className="pt-4 border-t border-black/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase opacity-50">進度遷移與備份</span>
+                        <span className="text-[10px] font-bold text-indigo-600">已完成 {settings.completedTasks.length} 章</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={handleExportProgress} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black hover:bg-indigo-100 transition-colors">
+                          <Download size={14} /> 匯出進度
+                        </button>
+                        <button onClick={handleImportProgress} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 text-white text-[10px] font-black hover:bg-black transition-colors">
+                          <Upload size={14} /> 匯入進度
+                        </button>
+                      </div>
+                      <input 
+                        type="text" 
+                        className="w-full text-[9px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono"
+                        placeholder="在此貼上匯出的進度代碼..."
+                        value={migrationInput}
+                        onChange={(e) => setMigrationInput(e.target.value)}
+                      />
+                    </div>
+
+                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃與進度已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18}/> 儲存並關閉</button>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
