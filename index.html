@@ -1,16 +1,44 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>2026 每日讀經</title>
+  
+  <!-- App Icons and Manifest -->
+  <!-- The icon uses the Lucide 'book-open' path inside a rounded indigo square for a premium app feel -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%234F46E5'/%3E%3Cpath d='M110 160h100c33.3 0 66.7 33.3 66.7 66.7v186.6c0-25-25-50-50-50H110V160zm292 0H302c-33.3 0-66.7 33.3-66.7 66.7v186.6c0-25 25-50 50-50h86.7V160z' fill='white'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%234F46E5'/%3E%3Cpath d='M110 160h100c33.3 0 66.7 33.3 66.7 66.7v186.6c0-25-25-50-50-50H110V160zm292 0H302c-33.3 0-66.7 33.3-66.7 66.7v186.6c0-25 25-50 50-50h86.7V160z' fill='white'/%3E%3C/svg%3E">
+  <link rel="manifest" href="./manifest.json">
+  
+  <!-- Mobile Web App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="每日讀經">
+  <meta name="theme-color" content="#4f46e5">
+  
+  <!-- Social Media Preview Tags (Open Graph) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="2026 每日讀經">
+  <meta property="og:description" content="您的每日靈修夥伴，支持多譯本對照與本地進度追蹤。">
+  <meta property="og:image" content="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%234F46E5'/%3E%3Cpath d='M110 160h100c33.3 0 66.7 33.3 66.7 66.7v186.6c0-25-25-50-50-50H110V160zm292 0H302c-33.3 0-66.7 33.3-66.7 66.7v186.6c0-25 25-50 50-50h86.7V160z' fill='white'/%3E%3C/svg%3E">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Inter', sans-serif; }
+    body { 
+      font-family: 'Inter', sans-serif; 
+      -webkit-tap-highlight-color: transparent;
+    }
     .font-serif { font-family: 'Noto Serif TC', serif; }
+    
+    html, body {
+      min-height: 100%;
+      overflow-x: hidden;
+    }
   </style>
 <script type="importmap">
 {

@@ -89,6 +89,49 @@ const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
   );
 };
 
+const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) => {
+  if (text.trim() === 'a') {
+    return <span className="opacity-30 italic font-sans text-[0.8em] tracking-tight">[併入上節]</span>;
+  }
+  const renderInner = (innerContent: string) => {
+    return innerContent.split(/(<br\s*\/?>)/gi).map((sub, j) => 
+      /^<br/i.test(sub) ? <br key={j} /> : sub
+    );
+  };
+  const parts = text.split(/(<h2[\s\S]*?<\/h2>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (!part) return null;
+        if (/^<h2/i.test(part)) {
+          const content = part.replace(/<\/?h2>/gi, '').trim();
+          return (
+            <h2 key={i} className={`block text-xl md:text-2xl font-black mb-4 mt-2 tracking-tight transition-colors duration-500 ${
+              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+            }`}>
+              {renderInner(content)}
+            </h2>
+          );
+        }
+        if (/^<u/i.test(part)) {
+          const content = part.replace(/<\/?u>/gi, '').trim();
+          return (
+            <u key={i} className="decoration-slate-400/50 underline-offset-4">
+              {renderInner(content)}
+            </u>
+          );
+        }
+        if (/^<br/i.test(part)) {
+          return <br key={i} />;
+        }
+        const prevPart = i > 0 ? parts[i-1] : null;
+        const displayPart = (prevPart && /^<h2/i.test(prevPart)) ? part.replace(/^\s+/, '') : part;
+        return <span key={i}>{displayPart}</span>;
+      })}
+    </>
+  );
+};
+
 const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     scheduleText: "馬太福音 1-3\n詩篇 1",
@@ -135,6 +178,17 @@ const App: React.FC = () => {
     }
     return `${mm}-${dd}`;
   });
+
+  // 改進的自動捲動邏輯：確保 loading 結束且 bibleData 存在時才捲動
+  useEffect(() => {
+    if (!loading && bibleData) {
+      // 使用 100ms 延遲確保經文已渲染並佔據高度
+      const timer = setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, bibleData?.reference]);
 
   useEffect(() => {
     const saved = localStorage.getItem('bible_settings');
@@ -197,17 +251,13 @@ const App: React.FC = () => {
     const items: ScheduleItem[] = [];
     const bookInfo = findBookCode(line);
     if (!bookInfo) return items;
-
     const remaining = line.replace(bookInfo.zh, "").replace(Object.keys(BIBLE_ALIASES).find(a => line.startsWith(a)) || "", "").trim();
-    
     if (remaining.includes(':')) {
       const parts = remaining.split(':');
       const chapter = parseInt(parts[0].trim());
       const versePart = parts[1].trim();
-      
       let startVerse: number | undefined;
       let endVerse: number | undefined;
-      
       if (versePart.includes('-')) {
         const vNumbers = versePart.match(/\d+/g);
         if (vNumbers && vNumbers.length >= 2) {
@@ -221,10 +271,8 @@ const App: React.FC = () => {
           endVerse = startVerse;
         }
       }
-      
       const label = startVerse ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}` : `${bookInfo.zh} ${chapter}`;
       const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
-      
       items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
     } else {
       const numbers = remaining.match(/\d+/g);
@@ -265,15 +313,12 @@ const App: React.FC = () => {
 
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
-    
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
     const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
-    
     let currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentFullId);
     if (currentIndex === -1) {
         currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
     }
-    
     return {
       inPlan: currentIndex !== -1,
       nextItem: currentIndex !== -1 && currentIndex < parsedSchedule.length - 1 ? parsedSchedule[currentIndex + 1] : null,
@@ -303,16 +348,12 @@ const App: React.FC = () => {
       }
     }
     if (!search || !search.book || !search.chapter) return;
-
     const pVer = customPrimary || settings.primaryVersion;
     const sVer = customSecondary !== undefined ? customSecondary : settings.secondaryVersion;
-
     setLoading(true);
     setError('');
-
     const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
     const qstr = `${search.book}${search.chapter}`;
-
     try {
       const fetchVersion = async (ver: string) => {
         const res = await fetch(`https://bible.fhl.net/json/qsb.php?qstr=${encodeURIComponent(qstr)}&version=${ver}&strong=0&gb=0`);
@@ -320,25 +361,16 @@ const App: React.FC = () => {
         const decoder = new TextDecoder("big5");
         const text = decoder.decode(buffer);
         const data = JSON.parse(text);
-
-        if (data.status !== 'success') {
-           throw new Error(`API Error for ${ver}: ${data.status}`);
-        }
-        return data.record.map((r: any) => ({
-          verse: r.sec,
-          text: r.bible_text
-        }));
+        if (data.status !== 'success') { throw new Error(`API Error for ${ver}: ${data.status}`); }
+        return data.record.map((r: any) => ({ verse: r.sec, text: r.bible_text }));
       };
-
       const [data1, data2] = await Promise.all([
         fetchVersion(pVer),
         sVer ? fetchVersion(sVer) : Promise.resolve(null)
       ]);
-
       const reference = search.label || (search.startVerse 
         ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}` 
         : `${bookZh} ${search.chapter}`);
-
       setBibleData({
         reference,
         bookCode: search.book,
@@ -349,7 +381,6 @@ const App: React.FC = () => {
       });
       setParallelData(data2);
       setInput(reference);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) { 
       console.error(err);
       setError("讀取失敗，請檢查網路或稍後再試。"); 
@@ -360,9 +391,7 @@ const App: React.FC = () => {
 
   const toggleTask = (id: string) => {
     const isCompleted = settings.completedTasks.includes(id);
-    const newTasks = isCompleted 
-      ? settings.completedTasks.filter(t => t !== id) 
-      : [...settings.completedTasks, id];
+    const newTasks = isCompleted ? settings.completedTasks.filter(t => t !== id) : [...settings.completedTasks, id];
     updateSetting('completedTasks', newTasks);
   };
 
@@ -387,7 +416,6 @@ const App: React.FC = () => {
     const lastDayOfMonth = new Date(year, month + 1, 0);
     const daysInMonth = lastDayOfMonth.getDate();
     const startingDay = firstDayOfMonth.getDay();
-    
     const days = [];
     for (let i = 0; i < startingDay; i++) days.push(null);
     for (let i = 1; i <= daysInMonth; i++) {
@@ -427,13 +455,7 @@ const App: React.FC = () => {
     if (plan.length > 0) {
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0];
-      fetchBible({ 
-        book: targetItem.book, 
-        chapter: targetItem.chapter, 
-        startVerse: targetItem.startVerse, 
-        endVerse: targetItem.endVerse, 
-        label: targetItem.label 
-      });
+      fetchBible({ book: targetItem.book, chapter: targetItem.chapter, startVerse: targetItem.startVerse, endVerse: targetItem.endVerse, label: targetItem.label });
     }
   };
 
@@ -470,6 +492,11 @@ const App: React.FC = () => {
     const end = bibleData.endVerse || start;
     return parallelData.filter(v => v.verse >= start && v.verse <= end);
   }, [bibleData, parallelData]);
+
+  const handleScrollToTop = () => {
+    // 使用 documentElement 確保在所有瀏覽器都能捲動
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
@@ -513,10 +540,7 @@ const App: React.FC = () => {
         <aside className="lg:col-span-1 space-y-6">
           <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-500 ${themes[settings.theme]}`}>
             <div className="flex items-center justify-between mb-4">
-              <button 
-                onClick={() => setIsScheduleExpanded(!isScheduleExpanded)}
-                className="font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity"
-              >
+              <button onClick={() => setIsScheduleExpanded(!isScheduleExpanded)} className="font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity">
                 <ChevronDown size={18} className={`text-indigo-600 transition-transform duration-300 ${isScheduleExpanded ? '' : '-rotate-90'}`} />
                 {settings.scheduleMode === 'daily' ? '每日計劃' : '讀經清單'}
               </button>
@@ -525,7 +549,6 @@ const App: React.FC = () => {
                 <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16}/></button>
               </div>
             </div>
-
             {isScheduleExpanded && (
               <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                 {settings.scheduleMode === 'daily' && !isEditingSchedule && (
@@ -571,7 +594,6 @@ const App: React.FC = () => {
                     </div>
                   </div>
                 )}
-
                 {isEditingSchedule ? (
                   <div className="space-y-4 animate-in zoom-in-95 duration-200">
                     <div className="flex gap-2 p-1 bg-black/5 rounded-xl">
@@ -633,30 +655,39 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="p-8 md:p-20 pb-32">
-                <div className={`grid gap-x-20 gap-y-16 ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px` }}>
+                <div className={`grid gap-x-12 gap-y-16 ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px` }}>
                   {filteredVerses.map((v, i) => (
                     <React.Fragment key={i}>
-                      <div className="flex gap-8 items-start group">
-                        <span className="text-[0.55em] font-black text-indigo-500/20 w-8 text-right mt-3 shrink-0 group-hover:text-indigo-500 transition-colors">{v.verse}</span>
-                        <div className="leading-relaxed font-serif whitespace-pre-wrap">{v.text}</div>
+                      <div className="flex gap-6 md:gap-10 items-start group relative">
+                        <span className="text-[0.6em] font-black text-indigo-500/20 w-8 text-right mt-3 shrink-0 group-hover:text-indigo-500 transition-colors">{v.verse}</span>
+                        <div className={`leading-relaxed font-serif whitespace-pre-wrap flex-1 text-justify ${
+                          settings.theme === 'dark' ? 'text-[#d1d1d1]' : settings.theme === 'sepia' ? 'text-[#5b4636]' : 'text-slate-900'
+                        }`}>
+                          <VerseText text={v.text} theme={settings.theme} />
+                        </div>
                       </div>
-                      {filteredParallel && filteredParallel[i] && (
-                        <div className="flex gap-8 items-start border-l-4 pl-10 border-indigo-500/5 bg-indigo-500/[0.01] rounded-r-3xl py-2">
-                          <span className="text-[0.55em] font-black text-emerald-500/20 w-8 text-right mt-3 shrink-0">{filteredParallel[i].verse}</span>
-                          <div className="leading-relaxed font-serif opacity-70 italic whitespace-pre-wrap text-[0.95em]">{filteredParallel[i].text}</div>
+                      {parallelData && (
+                        <div className={`flex gap-6 md:gap-10 items-start p-6 md:p-10 rounded-3xl transition-colors duration-500 ${
+                          settings.theme === 'dark' ? 'bg-white/[0.03]' : settings.theme === 'sepia' ? 'bg-[#5b4636]/[0.02]' : 'bg-indigo-500/[0.02]'
+                        }`}>
+                          <span className="text-[0.6em] font-black text-emerald-500/20 w-8 text-right mt-3 shrink-0">{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
+                          <div className={`leading-relaxed font-serif italic whitespace-pre-wrap flex-1 text-justify ${
+                            settings.theme === 'dark' ? 'text-white/40' : settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 'text-slate-500'
+                          }`}>
+                            {filteredParallel && filteredParallel[i] ? <VerseText text={filteredParallel[i].text} theme={settings.theme} /> : <span className="opacity-20 italic">無此節對應內容</span>}
+                          </div>
                         </div>
                       )}
                     </React.Fragment>
                   ))}
                 </div>
-
                 <div className="mt-40 border-t pt-24 text-center space-y-12">
                   <button onClick={markCurrentAsRead} className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}>
                     {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? <CheckCircle2 size={36}/> : <PartyPopper size={36}/>}
                     {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? "今日已讀" : "讀完了！"}
                   </button>
                   <div className="flex flex-wrap items-center justify-center gap-6">
-                    <button onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18}/> 回到頂部</button>
+                    <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18}/> 回到頂部</button>
                     {navStatus.inPlan ? (
                       navStatus.nextItem && (
                         <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">繼續讀經 <ChevronRightIcon size={20}/></button>
@@ -691,35 +722,16 @@ const App: React.FC = () => {
             }`}>資料來源與版權聲明</h4>
             <div className={`h-1 w-8 mx-auto rounded-full ${settings.theme === 'dark' ? 'bg-white/5' : 'bg-slate-200'}`} />
           </div>
-          
           <div className="text-[11px] space-y-4 leading-loose font-medium opacity-60">
-            <p>
-              本站聖經經文與研經資料，取自
-              <br className="sm:hidden" />
-              信望愛（FHL）聖經資料庫所提供之公開 API
-              <br />
-              資料來源：
-              <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">
-                https://bible.fhl.net
-              </a>
-            </p>
-
+            <p>本站聖經經文與研經資料，取自<br className="sm:hidden" />信望愛（FHL）聖經資料庫所提供之公開 API<br />資料來源：<a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">https://bible.fhl.net</a></p>
             <p>各聖經譯本之著作權分屬原著作權人所有，本站僅透過 API 即時呈現相關內容，僅供閱讀與學習使用。</p>
-
-            <p>
-              信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。
-              <br />
-              若您對完整資料或研經工具有興趣，請造訪 <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">信望愛官方網站</a>。
-            </p>
+            <p>信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。<br />若您對完整資料或研經工具有興趣，請造訪 <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">信望愛官方網站</a>。</p>
           </div>
-
           <div className={`pt-8 border-t border-transparent text-[10px] italic opacity-40 ${
             settings.theme === 'dark' ? 'text-white/20' : 
             settings.theme === 'sepia' ? 'text-[#5b4636]/30' : 
             'text-slate-400'
-          }`}>
-            本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。
-          </div>
+          }`}>本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。</div>
         </div>
       </footer>
 
