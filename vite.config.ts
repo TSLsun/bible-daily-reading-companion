@@ -1,6 +1,6 @@
 
 import { defineConfig } from 'vite';
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 
 // Read version from package.json
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
