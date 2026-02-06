@@ -22,6 +22,7 @@ export interface AppSettings {
   scheduleMode: ScheduleMode;
   completedTasks: string[];
   fontSize: number;
+  lineHeight: number;
   theme: Theme;
   primaryVersion: string;
   secondaryVersion: string | null;

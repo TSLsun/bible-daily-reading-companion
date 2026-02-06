@@ -5,7 +5,7 @@ import {
   AlertCircle, RefreshCw, Type, Sun, Moon, Coffee, X, Info, 
   PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings, 
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
-  Download, Upload, Share2, Trash2
+  Download, Upload, Share2, Trash2, AlignLeft, Sliders, Languages
 } from 'lucide-react';
 import { 
   BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE 
@@ -13,6 +13,9 @@ import {
 import { 
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme 
 } from './types';
+
+// Declare the global variable injected by Vite
+declare const __APP_VERSION__: string;
 
 const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => {
   const containerBg = {
@@ -99,7 +102,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
       /^<br/i.test(sub) ? <br key={j} /> : sub
     );
   };
-  const parts = text.split(/(<h2[\s\S]*?<\/h2>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
+  const parts = text.split(/(<h2[\s\S]*?<\/h2>|<h3[\s\S]*?<\/h3>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
   return (
     <>
       {parts.map((part, i) => {
@@ -114,6 +117,16 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
             </h2>
           );
         }
+        if (/^<h3/i.test(part)) {
+          const content = part.replace(/<\/?h3>/gi, '').trim();
+          return (
+            <h3 key={i} className={`block text-lg md:text-xl font-bold mb-3 mt-1 tracking-tight transition-colors duration-500 ${
+              theme === 'dark' ? 'text-indigo-300' : 'text-indigo-500'
+            }`}>
+              {renderInner(content)}
+            </h3>
+          );
+        }
         if (/^<u/i.test(part)) {
           const content = part.replace(/<\/?u>/gi, '').trim();
           return (
@@ -126,7 +139,8 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
           return <br key={i} />;
         }
         const prevPart = i > 0 ? parts[i-1] : null;
-        const displayPart = (prevPart && /^<h2/i.test(prevPart)) ? part.replace(/^\s+/, '') : part;
+        const isHeader = prevPart && (/^<h2/i.test(prevPart) || /^<h3/i.test(prevPart));
+        const displayPart = isHeader ? part.replace(/^\s+/, '') : part;
         return <span key={i}>{displayPart}</span>;
       })}
     </>
@@ -140,6 +154,7 @@ const App: React.FC = () => {
     scheduleMode: 'daily',
     completedTasks: [],
     fontSize: 18,
+    lineHeight: 1.6, // Updated default to 1.6
     theme: 'light',
     primaryVersion: 'unv',
     secondaryVersion: null,
@@ -150,6 +165,7 @@ const App: React.FC = () => {
   const [migrationInput, setMigrationInput] = useState('');
   const [availableVersions] = useState<VersionInfo[]>(FALLBACK_VERSIONS);
   const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean, target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
+  const [isTypeSettingsOpen, setIsTypeSettingsOpen] = useState(false);
   const [versionSearch, setVersionSearch] = useState('');
   const [bibleData, setBibleData] = useState<BibleData | null>(null);
   const [parallelData, setParallelData] = useState<BibleVerse[] | null>(null);
@@ -160,6 +176,7 @@ const App: React.FC = () => {
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(true);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const monthPickerRef = useRef<HTMLDivElement>(null);
+  const typeSettingsRef = useRef<HTMLDivElement>(null);
   
   const PLAN_YEAR = 2026;
   const [currentViewDate, setCurrentViewDate] = useState(() => {
@@ -216,14 +233,17 @@ const App: React.FC = () => {
       if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
         setIsMonthPickerOpen(false);
       }
+      if (typeSettingsRef.current && !typeSettingsRef.current.contains(event.target as Node)) {
+        setIsTypeSettingsOpen(false);
+      }
     };
-    if (isMonthPickerOpen) {
+    if (isMonthPickerOpen || isTypeSettingsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isMonthPickerOpen]);
+  }, [isMonthPickerOpen, isTypeSettingsOpen]);
 
   const saveSettings = useCallback((newSettings: AppSettings) => {
     setSettings(newSettings);
@@ -504,6 +524,15 @@ const App: React.FC = () => {
     setCurrentViewDate(new Date(y, currentViewDate.getMonth(), 1));
   };
 
+  const verseGapClass = useMemo(() => {
+    // Dynamic vertical gap based on spacing selection (aligned to 1.2, 1.4, 1.6, 1.8, 2.0 steps)
+    if (settings.lineHeight <= 1.25) return 'gap-y-4';
+    if (settings.lineHeight <= 1.45) return 'gap-y-6';
+    if (settings.lineHeight <= 1.65) return 'gap-y-8';
+    if (settings.lineHeight <= 1.85) return 'gap-y-10';
+    return 'gap-y-12';
+  }, [settings.lineHeight]);
+
   const filteredVerses = useMemo(() => {
     if (!bibleData) return [];
     if (!bibleData.startVerse) return bibleData.verses;
@@ -525,6 +554,8 @@ const App: React.FC = () => {
     if (document.documentElement) document.documentElement.scrollTop = 0;
     if (document.body) document.body.scrollTop = 0;
   };
+
+  const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v1.0.0-dev';
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
@@ -634,7 +665,6 @@ const App: React.FC = () => {
                       <textarea className="w-full h-40 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})} placeholder='{"01-01": "太 1"}' />
                     )}
                     
-                    {/* Progress Migration Section */}
                     <div className="pt-4 border-t border-black/5 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase opacity-50">進度遷移與備份</span>
@@ -693,7 +723,7 @@ const App: React.FC = () => {
             </div>
           ) : bibleData ? (
             <div className={`rounded-[2.5rem] border-2 overflow-hidden shadow-2xl shadow-indigo-100/10 transition-colors duration-500 animate-in fade-in duration-700 ${themes[settings.theme]}`}>
-              <div className="px-8 md:px-12 py-10 border-b flex items-center justify-between bg-black/[0.01]">
+              <div className="px-8 md:px-12 py-10 border-b flex flex-col md:flex-row md:items-center justify-between bg-black/[0.01] gap-6">
                 <div>
                   <h2 className="text-4xl font-black tracking-tight">{bibleData.reference}</h2>
                   <div className="flex gap-2 mt-4">
@@ -701,18 +731,74 @@ const App: React.FC = () => {
                     {settings.secondaryVersion && <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-600 text-white uppercase tracking-wider">{settings.secondaryVersion}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 bg-black/5 p-1 rounded-2xl">
-                   <button onClick={() => updateSetting('fontSize', Math.max(12, settings.fontSize - 2))} className="p-3 hover:bg-white rounded-xl transition-all"><Type size={16}/></button>
-                   <button onClick={() => updateSetting('fontSize', Math.min(36, settings.fontSize + 2))} className="p-3 hover:bg-white rounded-xl transition-all"><Type size={24}/></button>
+                <div className="relative flex items-center gap-3">
+                  <button onClick={() => setIsTypeSettingsOpen(!isTypeSettingsOpen)} className={`p-4 rounded-2xl transition-all flex items-center gap-2 group ${isTypeSettingsOpen ? 'bg-indigo-600 text-white shadow-lg' : 'bg-black/5 hover:bg-black/10'}`} title="閱讀設定">
+                    <Type size={20} />
+                    <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">設定</span>
+                    <ChevronDown size={14} className={`transition-transform duration-200 ${isTypeSettingsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {isTypeSettingsOpen && (
+                    <div ref={typeSettingsRef} className={`absolute top-full right-0 z-[55] mt-3 w-72 p-6 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}>
+                      <div className="space-y-8">
+                        <div>
+                          <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">字體大小: <span className="text-indigo-600">{settings.fontSize}px</span></label>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs opacity-40">A</span>
+                            <input 
+                              type="range" min="12" max="36" step="1" 
+                              className="flex-1 accent-indigo-600 cursor-pointer"
+                              value={settings.fontSize} 
+                              onChange={(e) => updateSetting('fontSize', parseInt(e.target.value))}
+                            />
+                            <span className="text-xl opacity-40">A</span>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">行間距離</label>
+                          <div className="grid grid-cols-5 gap-1 p-1 bg-black/5 rounded-2xl">
+                            {[1.2, 1.4, 1.6, 1.8, 2.0].map(lh => (
+                              <button 
+                                key={lh}
+                                onClick={() => updateSetting('lineHeight', lh)}
+                                className={`py-2 rounded-xl text-[10px] font-black transition-all ${settings.lineHeight === lh ? 'bg-indigo-600 text-white shadow-sm scale-105' : 'hover:bg-black/5 opacity-50 hover:opacity-100'}`}
+                              >
+                                {lh}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex justify-between mt-2 px-1">
+                            <span className="text-[9px] font-bold opacity-30">極緊</span>
+                            <span className="text-[9px] font-bold opacity-30">適中</span>
+                            <span className="text-[9px] font-bold opacity-30">寬敞</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-black/5">
+                          <button 
+                            onClick={() => {
+                              updateSetting('fontSize', 18);
+                              updateSetting('lineHeight', 1.6); // Default reset is now 1.6
+                              showToast("已恢復預設樣式");
+                            }}
+                            className="w-full py-3 text-[10px] font-black uppercase text-center hover:bg-black/5 rounded-xl transition-colors opacity-40 hover:opacity-100"
+                          >
+                            恢復預設
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="p-8 md:p-20 pb-32">
-                <div className={`grid gap-x-12 gap-y-16 ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px` }}>
+                <div className={`grid gap-x-12 ${verseGapClass} ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px`, lineHeight: settings.lineHeight }}>
                   {filteredVerses.map((v, i) => (
                     <React.Fragment key={i}>
                       <div className="flex gap-6 md:gap-10 items-start group relative">
-                        <span className="text-[0.6em] font-black text-indigo-500/20 w-8 text-right mt-3 shrink-0 group-hover:text-indigo-500 transition-colors">{v.verse}</span>
-                        <div className={`leading-relaxed font-serif whitespace-pre-wrap flex-1 text-justify ${
+                        <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-indigo-400/60' : 'text-indigo-600/60'}`}>{v.verse}</span>
+                        <div className={`leading-[inherit] font-serif whitespace-pre-wrap flex-1 text-justify ${
                           settings.theme === 'dark' ? 'text-[#d1d1d1]' : settings.theme === 'sepia' ? 'text-[#5b4636]' : 'text-slate-900'
                         }`}>
                           <VerseText text={v.text} theme={settings.theme} />
@@ -722,8 +808,8 @@ const App: React.FC = () => {
                         <div className={`flex gap-6 md:gap-10 items-start p-6 md:p-10 rounded-3xl transition-colors duration-500 ${
                           settings.theme === 'dark' ? 'bg-white/[0.03]' : settings.theme === 'sepia' ? 'bg-[#5b4636]/[0.02]' : 'bg-indigo-500/[0.02]'
                         }`}>
-                          <span className="text-[0.6em] font-black text-emerald-500/20 w-8 text-right mt-3 shrink-0">{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
-                          <div className={`leading-relaxed font-serif italic whitespace-pre-wrap flex-1 text-justify ${
+                          <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-emerald-400/60' : 'text-emerald-600/60'}`}>{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
+                          <div className={`leading-[inherit] font-serif italic whitespace-pre-wrap flex-1 text-justify ${
                             settings.theme === 'dark' ? 'text-white/40' : settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 'text-slate-500'
                           }`}>
                             {filteredParallel && filteredParallel[i] ? <VerseText text={filteredParallel[i].text} theme={settings.theme} /> : <span className="opacity-20 italic">無此節對應內容</span>}
@@ -783,7 +869,10 @@ const App: React.FC = () => {
             settings.theme === 'dark' ? 'text-white/20' : 
             settings.theme === 'sepia' ? 'text-[#5b4636]/30' : 
             'text-slate-400'
-          }`}>本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。</div>
+          }`}>
+            <p>本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。</p>
+            <p className="mt-4 font-mono select-all" title="應用程式版本資訊">{appVersion}</p>
+          </div>
         </div>
       </footer>
 
