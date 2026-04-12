@@ -218,21 +218,47 @@ const App: React.FC = () => {
         if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) {
           parsed.secondaryVersion = null;
         }
-
         // ── Backward-compat migration ─────────────────────────────────────────
         // v1 stored bare chapter IDs ("Ps1", "Jer52")
         // v2 stored "MM-DD:bareId"
         // v3 (current) stores "YYYY-MM-DD:bareId" for full multi-year support
+        // ALSO: the schedule JSON itself changed from MM-DD keys to YYYY-MM-DD.
         const HAS_YEAR_PREFIX = /^\d{4}-\d{2}-\d{2}:/;  // v3 – fully migrated
         const HAS_DATE_PREFIX = /^\d{2}-\d{2}:/;         // v2 – needs year prepended
+        const MIGRATION_YEAR = 2026;
 
-        const needsMigration = (parsed.completedTasks ?? []).some(
+        // 1. Migrate the schedule JSON itself if it uses old MM-DD keys
+        if (parsed.dailyScheduleJson) {
+          try {
+            const scheduleObj = JSON.parse(parsed.dailyScheduleJson);
+            const keys = Object.keys(scheduleObj);
+            const isOldFormat = keys.length > 0 && keys.every(k => /^\d{2}-\d{2}$/.test(k));
+
+            if (isOldFormat) {
+              const upgradedSchedule: Record<string, string> = {};
+              for (const [k, v] of Object.entries(scheduleObj)) {
+                upgradedSchedule[`${MIGRATION_YEAR}-${k}`] = v as string;
+              }
+              parsed.dailyScheduleJson = JSON.stringify(upgradedSchedule, null, 2);
+              console.info(`[Migration] Upgraded schedule JSON keys to ${MIGRATION_YEAR}-MM-DD format.`);
+            }
+          } catch (e) {
+            console.warn("Failed to migrate schedule JSON keys", e);
+          }
+        }
+
+        // 2. Migrate completed tasks
+        const needsTaskMigration = (parsed.completedTasks ?? []).some(
           (id: string) => !HAS_YEAR_PREFIX.test(id)
         );
 
-        if (needsMigration) {
-          const MIGRATION_YEAR = 2026; // all legacy records belong to the 2026 plan
-          const schedule = DEFAULT_DAILY_SCHEDULE as Record<string, string>;
+        if (needsTaskMigration) {
+          let schedule: Record<string, string>;
+          try {
+            schedule = parsed.dailyScheduleJson ? JSON.parse(parsed.dailyScheduleJson) : DEFAULT_DAILY_SCHEDULE;
+          } catch {
+            schedule = DEFAULT_DAILY_SCHEDULE;
+          }
 
           // Helper to parse bare chapter IDs from a schedule text line.
           const parseBareIds = (text: string): string[] => {
@@ -278,10 +304,9 @@ const App: React.FC = () => {
             return ids;
           };
 
-          // Build bare-id → full date-prefixed id map for the entire 2026 schedule.
-          // First occurrence wins (handles Psalm / Proverbs repeats correctly).
-          const bareToFull = new Map<string, string>(); // "Ps1" → "2026-01-01:Ps1"
-          const dateToFull = new Map<string, string>(); // "01-01:Ps1" → "2026-01-01:Ps1"
+          // Build bare-id → full date-prefixed id map for the entire schedule.
+          const bareToFull = new Map<string, string>();
+          const dateToFull = new Map<string, string>();
           for (const [dateKey, text] of Object.entries(schedule)) {
             const mmDdKey = dateKey.length === 10 ? dateKey.slice(5) : dateKey;
             for (const bareId of parseBareIds(text)) {
@@ -301,7 +326,7 @@ const App: React.FC = () => {
 
           parsed.completedTasks = migrated;
           const converted = migrated.filter((id: string) => HAS_YEAR_PREFIX.test(id)).length;
-          console.info(`[Migration] ${before} record(s) → ${converted} converted to YYYY-MM-DD format.`);
+          console.info(`[Migration] ${before} task record(s) → ${converted} converted to YYYY-MM-DD format.`);
         }
         // ─────────────────────────────────────────────────────────────────────
 
