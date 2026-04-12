@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  BookOpen, Search, History, Check, Calendar as CalendarIcon, CheckCircle2,
-  AlertCircle, RefreshCw, Type, Sun, Moon, Coffee, X, Info,
+  BookOpen, Search, CheckCircle2,
+  AlertCircle, Type, Sun, Moon, Coffee, X,
   PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
-  Download, Upload, Share2, Trash2, AlignLeft, Sliders, Languages
+  Download, Upload
 } from 'lucide-react';
 import {
   BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
@@ -187,7 +187,6 @@ const App: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
     // Use full YYYY-MM-DD for selected date to match new schedule keys
-    const year = today.getFullYear() === PLAN_YEAR ? PLAN_YEAR : PLAN_YEAR; // Match PLAN_YEAR for initial view if outside range
     const targetDate = today.getFullYear() === PLAN_YEAR ? today : new Date(PLAN_YEAR, 0, 1);
 
     const yyyy = targetDate.getFullYear();
@@ -205,7 +204,7 @@ const App: React.FC = () => {
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [loading, bibleData?.reference]);
+  }, [loading, bibleData, bibleData?.reference]);
 
   useEffect(() => {
     const saved = localStorage.getItem('bible_settings');
@@ -265,7 +264,7 @@ const App: React.FC = () => {
                   if (vNums && vNums.length >= 2) ids.push(`${bookEn}${ch}:${vNums[0]}-${vNums[1]}`);
                   else if (vNums) ids.push(`${bookEn}${ch}:${vNums[0]}`);
                 } else {
-                  const numericPart = rest.split(/[^\d\-]/)[0];
+                  const numericPart = rest.split(/[^\d-]/)[0];
                   const nums = numericPart.match(/\d+/g);
                   if (!nums) continue;
                   if (numericPart.includes('-') && nums.length >= 2) {
@@ -307,8 +306,8 @@ const App: React.FC = () => {
         // ─────────────────────────────────────────────────────────────────────
 
         setSettings(prev => ({ ...prev, ...parsed }));
-      } catch (e) {
-        console.error("Failed to load settings", e);
+      } catch {
+        console.error("Failed to load settings");
       }
     }
   }, []);
@@ -341,7 +340,7 @@ const App: React.FC = () => {
     return updated;
   };
 
-  const findBookCode = (text: string) => {
+  const findBookCode = useCallback((text: string) => {
     const lowerText = text.toLowerCase().trim();
     for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
       if (lowerText.startsWith(zh.toLowerCase())) return { en, zh, matchedLen: zh.length };
@@ -352,9 +351,9 @@ const App: React.FC = () => {
       }
     }
     return null;
-  };
+  }, []);
 
-  const parseScheduleLine = (line: string): ScheduleItem[] => {
+  const parseScheduleLine = useCallback((line: string): ScheduleItem[] => {
     // Split on Chinese enumeration comma 、 to support entries like "耶 52、哀 1-2"
     const segments = line.split('、');
     if (segments.length > 1) {
@@ -390,7 +389,7 @@ const App: React.FC = () => {
       items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
     } else {
       // Only take digits from the numeric part (ignore trailing book names from 、 splits)
-      const numericPart = remaining.split(/[^\d\-]/)[0];
+      const numericPart = remaining.split(/[^\d-]/)[0];
       const numbers = numericPart.match(/\d+/g);
       if (numbers) {
         if (numericPart.includes('-') && numbers.length >= 2) {
@@ -408,7 +407,7 @@ const App: React.FC = () => {
       }
     }
     return items;
-  };
+  }, [findBookCode]);
 
   const getDayPlan = useCallback((dateKey: string): ScheduleItem[] => {
     try {
@@ -418,17 +417,17 @@ const App: React.FC = () => {
       // Prefix IDs with the dateKey (which is now YYYY-MM-DD) so they are unique
       // across different dates and years.
       return items.map((item: ScheduleItem) => ({ ...item, id: `${dateKey}:${item.id}` }));
-    } catch (e) {
+    } catch {
       return [];
     }
-  }, [settings.dailyScheduleJson]);
+  }, [settings.dailyScheduleJson, parseScheduleLine]);
 
   const parsedSchedule = useMemo(() => {
     if (settings.scheduleMode === 'static') {
       return settings.scheduleText.split('\n').filter(l => l.trim()).flatMap(parseScheduleLine);
     }
     return getDayPlan(selectedDate);
-  }, [settings.scheduleMode, settings.scheduleText, selectedDate, getDayPlan]);
+  }, [settings.scheduleMode, settings.scheduleText, selectedDate, getDayPlan, parseScheduleLine]);
 
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
@@ -440,8 +439,8 @@ const App: React.FC = () => {
     }
     return {
       inPlan: currentIndex !== -1,
-      nextItem: currentIndex !== -1 && currentIndex < parsedSchedule.length - 1 ? parsedSchedule[currentIndex + 1] : null,
-      prevItem: currentIndex > 0 ? parsedSchedule[currentIndex - 1] : null
+      nextItem: currentIndex !== -1 && currentIndex < (parsedSchedule as any).length - 1 ? (parsedSchedule as any)[currentIndex + 1] : null,
+      prevItem: currentIndex > 0 ? (parsedSchedule as any)[currentIndex - 1] : null
     };
   }, [bibleData, parsedSchedule]);
 
@@ -547,7 +546,7 @@ const App: React.FC = () => {
       } else {
         showToast("格式錯誤，請確認貼上的內容是否正確。", "error");
       }
-    } catch (e) {
+    } catch {
       showToast("解析失敗，請確認代碼完整性。", "error");
     }
   };
