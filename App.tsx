@@ -774,7 +774,7 @@ const App: React.FC = () => {
                         if (!d) return <div key={`empty-${idx}`} className="aspect-square"></div>;
                         const isSelected = d.dateKey === selectedDate;
                         const today = new Date();
-                        const isActuallyToday = today.getFullYear() === PLAN_YEAR && d.dateKey === `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+                        const isActuallyToday = d.dateKey === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                         return (
                           <button key={d.dateKey} onClick={() => handleDayClick(d.dateKey)} className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all group ${isSelected ? 'bg-indigo-600 text-white shadow-md z-10' : 'hover:bg-black/5'} ${isActuallyToday && !isSelected ? 'ring-2 ring-indigo-500/30' : ''} ${!d.hasPlan && !isSelected ? 'opacity-20' : ''}`}>
                             {d.day}
