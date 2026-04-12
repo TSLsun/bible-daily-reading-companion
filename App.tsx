@@ -1,17 +1,17 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { 
-  BookOpen, Search, History, Check, Calendar as CalendarIcon, CheckCircle2, 
-  AlertCircle, RefreshCw, Type, Sun, Moon, Coffee, X, Info, 
-  PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings, 
+import {
+  BookOpen, Search, History, Check, Calendar as CalendarIcon, CheckCircle2,
+  AlertCircle, RefreshCw, Type, Sun, Moon, Coffee, X, Info,
+  PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
   Download, Upload, Share2, Trash2, AlignLeft, Sliders, Languages
 } from 'lucide-react';
-import { 
-  BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE 
+import {
+  BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
 } from './constants';
-import { 
-  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme 
+import {
+  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
 } from './types';
 
 // Declare the global variable injected by Vite
@@ -69,23 +69,21 @@ const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
     <div className="flex flex-col items-center justify-center h-[75vh] text-center p-10 animate-in fade-in zoom-in-95 duration-700">
       <div className="relative mb-12">
         <div className={`p-10 rounded-[3rem] border-2 transition-all duration-500 ${containerBg[theme]}`}>
-          <BookOpen 
-            size={84} 
+          <BookOpen
+            size={84}
             strokeWidth={1.5}
-            className={`transition-colors duration-500 ${iconColor[theme]}`} 
+            className={`transition-colors duration-500 ${iconColor[theme]}`}
           />
         </div>
         <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
         <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
       </div>
-      <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-50 ${
-        theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
-      }`}>
+      <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-50 ${theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
+        }`}>
         靈修從此刻開始
       </h3>
-      <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${
-        theme === 'dark' ? 'text-white/30' : 'text-slate-400'
-      }`}>
+      <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${theme === 'dark' ? 'text-white/30' : 'text-slate-400'
+        }`}>
         選擇左側日曆中的日期或搜尋書卷，<br />
         開啟您與真理的對話空間。
       </p>
@@ -98,7 +96,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
     return <span className="opacity-30 italic font-sans text-[0.8em] tracking-tight">[併入上節]</span>;
   }
   const renderInner = (innerContent: string) => {
-    return innerContent.split(/(<br\s*\/?>)/gi).map((sub, j) => 
+    return innerContent.split(/(<br\s*\/?>)/gi).map((sub, j) =>
       /^<br/i.test(sub) ? <br key={j} /> : sub
     );
   };
@@ -110,9 +108,8 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
         if (/^<h2/i.test(part)) {
           const content = part.replace(/<\/?h2>/gi, '').trim();
           return (
-            <h2 key={i} className={`block text-xl md:text-2xl font-black mb-4 mt-2 tracking-tight transition-colors duration-500 ${
-              theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
-            }`}>
+            <h2 key={i} className={`block text-xl md:text-2xl font-black mb-4 mt-2 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
+              }`}>
               {renderInner(content)}
             </h2>
           );
@@ -120,9 +117,8 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
         if (/^<h3/i.test(part)) {
           const content = part.replace(/<\/?h3>/gi, '').trim();
           return (
-            <h3 key={i} className={`block text-lg md:text-xl font-bold mb-3 mt-1 tracking-tight transition-colors duration-500 ${
-              theme === 'dark' ? 'text-indigo-300' : 'text-indigo-500'
-            }`}>
+            <h3 key={i} className={`block text-lg md:text-xl font-bold mb-3 mt-1 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-500'
+              }`}>
               {renderInner(content)}
             </h3>
           );
@@ -138,7 +134,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
         if (/^<br/i.test(part)) {
           return <br key={i} />;
         }
-        const prevPart = i > 0 ? parts[i-1] : null;
+        const prevPart = i > 0 ? parts[i - 1] : null;
         const isHeader = prevPart && (/^<h2/i.test(prevPart) || /^<h3/i.test(prevPart));
         const displayPart = isHeader ? part.replace(/^\s+/, '') : part;
         return <span key={i}>{displayPart}</span>;
@@ -175,9 +171,12 @@ const App: React.FC = () => {
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(true);
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
+  // Tracks the date-prefixed schedule item ID currently being read, so
+  // "讀完了！" marks the correct plan entry (not a bare chapter-only ID).
+  const [currentScheduleItemId, setCurrentScheduleItemId] = useState<string | null>(null);
   const monthPickerRef = useRef<HTMLDivElement>(null);
   const typeSettingsRef = useRef<HTMLDivElement>(null);
-  
+
   const PLAN_YEAR = 2026;
   const [currentViewDate, setCurrentViewDate] = useState(() => {
     const today = new Date();
@@ -187,15 +186,14 @@ const App: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
-    let mm, dd;
-    if (today.getFullYear() === PLAN_YEAR) {
-      mm = String(today.getMonth() + 1).padStart(2, '0');
-      dd = String(today.getDate()).padStart(2, '0');
-    } else {
-      mm = "01";
-      dd = "01";
-    }
-    return `${mm}-${dd}`;
+    // Use full YYYY-MM-DD for selected date to match new schedule keys
+    const year = today.getFullYear() === PLAN_YEAR ? PLAN_YEAR : PLAN_YEAR; // Match PLAN_YEAR for initial view if outside range
+    const targetDate = today.getFullYear() === PLAN_YEAR ? today : new Date(PLAN_YEAR, 0, 1);
+
+    const yyyy = targetDate.getFullYear();
+    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(targetDate.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   });
 
   useEffect(() => {
@@ -216,11 +214,98 @@ const App: React.FC = () => {
         const parsed = JSON.parse(saved);
         const validIds = FALLBACK_VERSIONS.map(v => v.id);
         if (parsed.primaryVersion && !validIds.includes(parsed.primaryVersion)) {
-           parsed.primaryVersion = 'unv';
+          parsed.primaryVersion = 'unv';
         }
         if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) {
-           parsed.secondaryVersion = null;
+          parsed.secondaryVersion = null;
         }
+
+        // ── Backward-compat migration ─────────────────────────────────────────
+        // v1 stored bare chapter IDs ("Ps1", "Jer52")
+        // v2 stored "MM-DD:bareId"
+        // v3 (current) stores "YYYY-MM-DD:bareId" for full multi-year support
+        const HAS_YEAR_PREFIX = /^\d{4}-\d{2}-\d{2}:/;  // v3 – fully migrated
+        const HAS_DATE_PREFIX = /^\d{2}-\d{2}:/;         // v2 – needs year prepended
+
+        const needsMigration = (parsed.completedTasks ?? []).some(
+          (id: string) => !HAS_YEAR_PREFIX.test(id)
+        );
+
+        if (needsMigration) {
+          const MIGRATION_YEAR = 2026; // all legacy records belong to the 2026 plan
+          const schedule = DEFAULT_DAILY_SCHEDULE as Record<string, string>;
+
+          // Helper to parse bare chapter IDs from a schedule text line.
+          const parseBareIds = (text: string): string[] => {
+            const ids: string[] = [];
+            const lines = text.split('\n').filter(Boolean);
+            for (const line of lines) {
+              for (const seg of line.split('、')) {
+                const s = seg.trim();
+                let bookEn: string | null = null;
+                let matchedLen = 0;
+                outer: {
+                  for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
+                    if (s.toLowerCase().startsWith(zh.toLowerCase())) {
+                      bookEn = en; matchedLen = zh.length; break outer;
+                    }
+                  }
+                  for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
+                    if (s.toLowerCase().startsWith(alias.toLowerCase())) {
+                      bookEn = BIBLE_BOOKS[full]; matchedLen = alias.length; break outer;
+                    }
+                  }
+                }
+                if (!bookEn) continue;
+                const rest = s.slice(matchedLen).trim();
+                if (rest.includes(':')) {
+                  const [chStr, verStr] = rest.split(':');
+                  const ch = parseInt(chStr);
+                  const vNums = verStr.match(/\d+/g);
+                  if (vNums && vNums.length >= 2) ids.push(`${bookEn}${ch}:${vNums[0]}-${vNums[1]}`);
+                  else if (vNums) ids.push(`${bookEn}${ch}:${vNums[0]}`);
+                } else {
+                  const numericPart = rest.split(/[^\d\-]/)[0];
+                  const nums = numericPart.match(/\d+/g);
+                  if (!nums) continue;
+                  if (numericPart.includes('-') && nums.length >= 2) {
+                    for (let i = parseInt(nums[0]); i <= parseInt(nums[1]); i++) ids.push(`${bookEn}${i}`);
+                  } else {
+                    for (const n of nums) ids.push(`${bookEn}${parseInt(n)}`);
+                  }
+                }
+              }
+            }
+            return ids;
+          };
+
+          // Build bare-id → full date-prefixed id map for the entire 2026 schedule.
+          // First occurrence wins (handles Psalm / Proverbs repeats correctly).
+          const bareToFull = new Map<string, string>(); // "Ps1" → "2026-01-01:Ps1"
+          const dateToFull = new Map<string, string>(); // "01-01:Ps1" → "2026-01-01:Ps1"
+          for (const [dateKey, text] of Object.entries(schedule)) {
+            const mmDdKey = dateKey.length === 10 ? dateKey.slice(5) : dateKey;
+            for (const bareId of parseBareIds(text)) {
+              const fullId = `${dateKey}:${bareId}`;
+              if (!bareToFull.has(bareId)) bareToFull.set(bareId, fullId);
+              dateToFull.set(`${mmDdKey}:${bareId}`, fullId);
+            }
+          }
+
+          const before = (parsed.completedTasks ?? []).length;
+          const migrated: string[] = (parsed.completedTasks ?? []).map((id: string) => {
+            if (HAS_YEAR_PREFIX.test(id)) return id;               // v3 – already done
+            if (HAS_DATE_PREFIX.test(id))                          // v2 – prepend year
+              return dateToFull.get(id) ?? `${MIGRATION_YEAR}-${id}`;
+            return bareToFull.get(id) ?? id;                       // v1 – full lookup
+          });
+
+          parsed.completedTasks = migrated;
+          const converted = migrated.filter((id: string) => HAS_YEAR_PREFIX.test(id)).length;
+          console.info(`[Migration] ${before} record(s) → ${converted} converted to YYYY-MM-DD format.`);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         setSettings(prev => ({ ...prev, ...parsed }));
       } catch (e) {
         console.error("Failed to load settings", e);
@@ -253,27 +338,34 @@ const App: React.FC = () => {
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const updated = { ...settings, [key]: value };
     saveSettings(updated);
-    return updated; 
+    return updated;
   };
 
   const findBookCode = (text: string) => {
     const lowerText = text.toLowerCase().trim();
     for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-      if (lowerText.startsWith(zh.toLowerCase())) return { en, zh };
+      if (lowerText.startsWith(zh.toLowerCase())) return { en, zh, matchedLen: zh.length };
     }
     for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
       if (lowerText.startsWith(alias.toLowerCase())) {
-        return { en: BIBLE_BOOKS[full], zh: full };
+        return { en: BIBLE_BOOKS[full], zh: full, matchedLen: alias.length };
       }
     }
     return null;
   };
 
   const parseScheduleLine = (line: string): ScheduleItem[] => {
+    // Split on Chinese enumeration comma 、 to support entries like "耶 52、哀 1-2"
+    const segments = line.split('、');
+    if (segments.length > 1) {
+      return segments.flatMap(seg => parseScheduleLine(seg.trim()));
+    }
+
     const items: ScheduleItem[] = [];
     const bookInfo = findBookCode(line);
     if (!bookInfo) return items;
-    const remaining = line.replace(bookInfo.zh, "").replace(Object.keys(BIBLE_ALIASES).find(a => line.startsWith(a)) || "", "").trim();
+    // Use the exact matched token length (alias or full name) to strip the prefix
+    const remaining = line.slice(bookInfo.matchedLen).trim();
     if (remaining.includes(':')) {
       const parts = remaining.split(':');
       const chapter = parseInt(parts[0].trim());
@@ -297,9 +389,11 @@ const App: React.FC = () => {
       const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
       items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
     } else {
-      const numbers = remaining.match(/\d+/g);
+      // Only take digits from the numeric part (ignore trailing book names from 、 splits)
+      const numericPart = remaining.split(/[^\d\-]/)[0];
+      const numbers = numericPart.match(/\d+/g);
       if (numbers) {
-        if (remaining.includes('-') && numbers.length >= 2) {
+        if (numericPart.includes('-') && numbers.length >= 2) {
           const start = parseInt(numbers[0]);
           const end = parseInt(numbers[1]);
           for (let i = start; i <= end; i++) {
@@ -320,7 +414,10 @@ const App: React.FC = () => {
     try {
       const json = JSON.parse(settings.dailyScheduleJson);
       const sourceText = json[dateKey] || "";
-      return sourceText.split('\n').filter((l: string) => l.trim()).flatMap(parseScheduleLine);
+      const items = sourceText.split('\n').filter((l: string) => l.trim()).flatMap(parseScheduleLine);
+      // Prefix IDs with the dateKey (which is now YYYY-MM-DD) so they are unique
+      // across different dates and years.
+      return items.map((item: ScheduleItem) => ({ ...item, id: `${dateKey}:${item.id}` }));
     } catch (e) {
       return [];
     }
@@ -339,7 +436,7 @@ const App: React.FC = () => {
     const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
     let currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentFullId);
     if (currentIndex === -1) {
-        currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
+      currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
     }
     return {
       inPlan: currentIndex !== -1,
@@ -349,8 +446,8 @@ const App: React.FC = () => {
   }, [bibleData, parsedSchedule]);
 
   const fetchBible = async (
-    refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string } | null = null, 
-    customPrimary?: string, 
+    refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string, scheduleItemId?: string } | null = null,
+    customPrimary?: string,
     customSecondary?: string | null
   ) => {
     let search = refInfo;
@@ -363,8 +460,8 @@ const App: React.FC = () => {
         if (parsed && numbers) {
           search = { book: parsed.en, chapter: parseInt(numbers[0]) };
           if (input.includes(':') && numbers.length >= 2) {
-             search.startVerse = parseInt(numbers[1]);
-             if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
+            search.startVerse = parseInt(numbers[1]);
+            if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
           }
         }
       }
@@ -390,8 +487,8 @@ const App: React.FC = () => {
         fetchVersion(pVer),
         sVer ? fetchVersion(sVer) : Promise.resolve(null)
       ]);
-      const reference = search.label || (search.startVerse 
-        ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}` 
+      const reference = search.label || (search.startVerse
+        ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}`
         : `${bookZh} ${search.chapter}`);
       setBibleData({
         reference,
@@ -403,11 +500,13 @@ const App: React.FC = () => {
       });
       setParallelData(data2);
       setInput(reference);
-    } catch (err: any) { 
+      // Track which schedule item (with date-prefixed ID) is being read
+      setCurrentScheduleItemId(refInfo?.scheduleItemId ?? null);
+    } catch (err: any) {
       console.error(err);
-      setError("讀取失敗，請檢查網路或稍後再試。"); 
-    } finally { 
-      setLoading(false); 
+      setError("讀取失敗，請檢查網路或稍後再試。");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -419,9 +518,11 @@ const App: React.FC = () => {
 
   const markCurrentAsRead = () => {
     if (!bibleData) return;
-    const currentId = `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
-    if (!settings.completedTasks.includes(currentId)) {
-      toggleTask(currentId);
+    // Prefer the date-prefixed schedule item ID if available; fall back to bare chapter ID
+    const idToMark = currentScheduleItemId ||
+      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+    if (!settings.completedTasks.includes(idToMark)) {
+      toggleTask(idToMark);
       showToast(`已完成：${bibleData.reference}！`);
     }
   };
@@ -466,9 +567,10 @@ const App: React.FC = () => {
     const days = [];
     for (let i = 0; i < startingDay; i++) days.push(null);
     for (let i = 1; i <= daysInMonth; i++) {
+      const yyyy = year;
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(i).padStart(2, '0');
-      const dateKey = `${mm}-${dd}`;
+      const dateKey = `${yyyy}-${mm}-${dd}`;
       const plan = getDayPlan(dateKey);
       const hasPlan = plan.length > 0;
       const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
@@ -502,16 +604,17 @@ const App: React.FC = () => {
     if (plan.length > 0) {
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0];
-      fetchBible({ book: targetItem.book, chapter: targetItem.chapter, startVerse: targetItem.startVerse, endVerse: targetItem.endVerse, label: targetItem.label });
+      fetchBible({ book: targetItem.book, chapter: targetItem.chapter, startVerse: targetItem.startVerse, endVerse: targetItem.endVerse, label: targetItem.label, scheduleItemId: targetItem.id });
     }
   };
 
   const goToTodayInPlan = () => {
     const today = new Date();
+    const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    const dateKey = `${mm}-${dd}`;
-    setCurrentViewDate(new Date(PLAN_YEAR, today.getMonth(), today.getDate()));
+    const dateKey = `${yyyy}-${mm}-${dd}`;
+    setCurrentViewDate(today);
     handleDayClick(dateKey);
   };
 
@@ -585,12 +688,12 @@ const App: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-           <div className="flex items-center bg-black/5 p-1 rounded-xl">
+          <div className="flex items-center bg-black/5 p-1 rounded-xl">
             <button onClick={() => setShowVersionPicker({ active: true, target: 'primary' })} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${settings.theme === 'dark' ? 'hover:bg-white/10 text-white' : 'bg-white shadow-sm'}`}>{settings.primaryVersion}</button>
             <button onClick={() => settings.secondaryVersion ? updateSetting('secondaryVersion', null) : setShowVersionPicker({ active: true, target: 'secondary' })} className={`ml-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${settings.secondaryVersion ? 'bg-indigo-600 text-white' : 'opacity-40 hover:opacity-100'}`}>{settings.secondaryVersion || "+ 譯本對照"}</button>
           </div>
           <button onClick={() => updateSetting('theme', settings.theme === 'dark' ? 'light' : settings.theme === 'light' ? 'sepia' : 'dark')} className="p-2 hover:bg-black/5 rounded-full transition-colors">
-            {settings.theme === 'light' ? <Sun size={20}/> : settings.theme === 'sepia' ? <Coffee size={20}/> : <Moon size={20}/>}
+            {settings.theme === 'light' ? <Sun size={20} /> : settings.theme === 'sepia' ? <Coffee size={20} /> : <Moon size={20} />}
           </button>
         </div>
       </nav>
@@ -605,7 +708,7 @@ const App: React.FC = () => {
               </button>
               <div className="flex gap-1">
                 <button onClick={goToTodayInPlan} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="回到今天 (2026)"><Target size={16} /></button>
-                <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16}/></button>
+                <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16} /></button>
               </div>
             </div>
             {isScheduleExpanded && (
@@ -613,21 +716,21 @@ const App: React.FC = () => {
                 {settings.scheduleMode === 'daily' && !isEditingSchedule && (
                   <div className="mb-6">
                     <div className="relative flex items-center justify-between mb-4 px-1">
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronLeft size={16}/></button>
+                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronLeft size={16} /></button>
                       <button onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="flex items-center gap-1.5 font-bold text-sm tracking-tight px-3 py-1.5 hover:bg-black/5 rounded-xl transition-all active:scale-95">
                         {currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月
                         <ChevronDown size={14} className={`transition-transform duration-200 ${isMonthPickerOpen ? 'rotate-180' : ''}`} />
                       </button>
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronRight size={16}/></button>
+                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronRight size={16} /></button>
                       {isMonthPickerOpen && (
                         <div ref={monthPickerRef} className={`absolute top-full left-1/2 -translate-x-1/2 z-50 mt-2 w-64 p-4 rounded-2xl shadow-2xl border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}>
                           <div className="flex items-center justify-between mb-4 border-b pb-2">
-                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() - 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronLeft size={14}/></button>
+                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() - 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronLeft size={14} /></button>
                             <span className="font-black text-sm">{currentViewDate.getFullYear()}</span>
-                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() + 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronRight size={14}/></button>
+                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() + 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronRight size={14} /></button>
                           </div>
                           <div className="grid grid-cols-3 gap-2">
-                            {[0,1,2,3,4,5,6,7,8,9,10,11].map(m => (
+                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(m => (
                               <button key={m} onClick={() => handleMonthSelect(m)} className={`py-2 rounded-xl text-xs font-bold transition-all ${currentViewDate.getMonth() === m ? 'bg-indigo-600 text-white' : 'hover:bg-black/5'}`}>{m + 1}月</button>
                             ))}
                           </div>
@@ -635,7 +738,7 @@ const App: React.FC = () => {
                       )}
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-[10px] uppercase font-black opacity-30 text-center mb-2">
-                      {['日','一','二','三','四','五','六'].map(d => <div key={d}>{d}</div>)}
+                      {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d}>{d}</div>)}
                     </div>
                     <div className="grid grid-cols-7 gap-1.5">
                       {calendarDays.map((d, idx) => {
@@ -656,15 +759,15 @@ const App: React.FC = () => {
                 {isEditingSchedule ? (
                   <div className="space-y-4 animate-in zoom-in-95 duration-200">
                     <div className="flex gap-2 p-1 bg-black/5 rounded-xl">
-                       <button onClick={() => updateSetting('scheduleMode', 'static')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'static' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>靜態</button>
-                       <button onClick={() => updateSetting('scheduleMode', 'daily')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'daily' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>每日 (JSON)</button>
+                      <button onClick={() => updateSetting('scheduleMode', 'static')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'static' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>靜態</button>
+                      <button onClick={() => updateSetting('scheduleMode', 'daily')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'daily' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>每日 (JSON)</button>
                     </div>
                     {settings.scheduleMode === 'static' ? (
-                      <textarea className="w-full h-40 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({...settings, scheduleText: e.target.value})} placeholder="格式：馬太 1-3" />
+                      <textarea className="w-full h-40 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({ ...settings, scheduleText: e.target.value })} placeholder="格式：馬太 1-3" />
                     ) : (
-                      <textarea className="w-full h-40 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({...settings, dailyScheduleJson: e.target.value})} placeholder='{"01-01": "太 1"}' />
+                      <textarea className="w-full h-40 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({ ...settings, dailyScheduleJson: e.target.value })} placeholder='{"01-01": "太 1"}' />
                     )}
-                    
+
                     <div className="pt-4 border-t border-black/5 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black uppercase opacity-50">進度遷移與備份</span>
@@ -678,8 +781,8 @@ const App: React.FC = () => {
                           <Upload size={14} /> 匯入進度
                         </button>
                       </div>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         className="w-full text-[9px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono"
                         placeholder="在此貼上匯出的進度代碼..."
                         value={migrationInput}
@@ -687,7 +790,7 @@ const App: React.FC = () => {
                       />
                     </div>
 
-                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃與進度已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18}/> 儲存並關閉</button>
+                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃與進度已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18} /> 儲存並關閉</button>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
@@ -695,7 +798,7 @@ const App: React.FC = () => {
                       <span className="text-[10px] font-black uppercase text-indigo-600/50">{settings.scheduleMode === 'daily' ? `${selectedDate} 的章節` : '所有章節'}</span>
                     </div>
                     {parsedSchedule.length > 0 ? parsedSchedule.map((item: ScheduleItem) => (
-                      <button key={item.id} className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label })}>
+                      <button key={item.id} className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id })}>
                         <span className={`text-sm font-bold truncate ${settings.completedTasks.includes(item.id) ? 'line-through opacity-30 italic' : ''}`}>{item.label}</span>
                         <div onClick={(e) => { e.stopPropagation(); toggleTask(item.id); }} className={`p-1 ${settings.completedTasks.includes(item.id) ? 'text-green-500' : 'text-slate-300 hover:text-indigo-400'} transition-colors cursor-pointer`}>
                           <CheckCircle2 size={18} fill={settings.completedTasks.includes(item.id) ? "currentColor" : "none"} />
@@ -719,7 +822,7 @@ const App: React.FC = () => {
             <LoadingView theme={settings.theme} />
           ) : error ? (
             <div className="bg-rose-500/10 border-2 border-rose-500/20 text-rose-500 p-8 rounded-[2.5rem] flex gap-4 animate-in shake duration-500">
-              <AlertCircle size={24}/><p className="font-bold">{error}</p>
+              <AlertCircle size={24} /><p className="font-bold">{error}</p>
             </div>
           ) : bibleData ? (
             <div className={`rounded-[2.5rem] border-2 overflow-hidden shadow-2xl shadow-indigo-100/10 transition-colors duration-500 animate-in fade-in duration-700 ${themes[settings.theme]}`}>
@@ -745,21 +848,21 @@ const App: React.FC = () => {
                           <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">字體大小: <span className="text-indigo-600">{settings.fontSize}px</span></label>
                           <div className="flex items-center gap-4">
                             <span className="text-xs opacity-40">A</span>
-                            <input 
-                              type="range" min="12" max="36" step="1" 
+                            <input
+                              type="range" min="12" max="36" step="1"
                               className="flex-1 accent-indigo-600 cursor-pointer"
-                              value={settings.fontSize} 
+                              value={settings.fontSize}
                               onChange={(e) => updateSetting('fontSize', parseInt(e.target.value))}
                             />
                             <span className="text-xl opacity-40">A</span>
                           </div>
                         </div>
-                        
+
                         <div>
                           <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">行間距離</label>
                           <div className="grid grid-cols-5 gap-1 p-1 bg-black/5 rounded-2xl">
                             {[1.2, 1.4, 1.6, 1.8, 2.0].map(lh => (
-                              <button 
+                              <button
                                 key={lh}
                                 onClick={() => updateSetting('lineHeight', lh)}
                                 className={`py-2 rounded-xl text-[10px] font-black transition-all ${settings.lineHeight === lh ? 'bg-indigo-600 text-white shadow-sm scale-105' : 'hover:bg-black/5 opacity-50 hover:opacity-100'}`}
@@ -776,7 +879,7 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="pt-4 border-t border-black/5">
-                          <button 
+                          <button
                             onClick={() => {
                               updateSetting('fontSize', 18);
                               updateSetting('lineHeight', 1.6); // Default reset is now 1.6
@@ -798,20 +901,17 @@ const App: React.FC = () => {
                     <React.Fragment key={i}>
                       <div className="flex gap-6 md:gap-10 items-start group relative">
                         <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-indigo-400/60' : 'text-indigo-600/60'}`}>{v.verse}</span>
-                        <div className={`leading-[inherit] font-serif whitespace-pre-wrap flex-1 text-justify ${
-                          settings.theme === 'dark' ? 'text-[#d1d1d1]' : settings.theme === 'sepia' ? 'text-[#5b4636]' : 'text-slate-900'
-                        }`}>
+                        <div className={`leading-[inherit] font-serif whitespace-pre-wrap flex-1 text-justify ${settings.theme === 'dark' ? 'text-[#d1d1d1]' : settings.theme === 'sepia' ? 'text-[#5b4636]' : 'text-slate-900'
+                          }`}>
                           <VerseText text={v.text} theme={settings.theme} />
                         </div>
                       </div>
                       {parallelData && (
-                        <div className={`flex gap-6 md:gap-10 items-start p-6 md:p-10 rounded-3xl transition-colors duration-500 ${
-                          settings.theme === 'dark' ? 'bg-white/[0.03]' : settings.theme === 'sepia' ? 'bg-[#5b4636]/[0.02]' : 'bg-indigo-500/[0.02]'
-                        }`}>
-                          <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-emerald-400/60' : 'text-emerald-600/60'}`}>{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
-                          <div className={`leading-[inherit] font-serif italic whitespace-pre-wrap flex-1 text-justify ${
-                            settings.theme === 'dark' ? 'text-white/40' : settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 'text-slate-500'
+                        <div className={`flex gap-6 md:gap-10 items-start p-6 md:p-10 rounded-3xl transition-colors duration-500 ${settings.theme === 'dark' ? 'bg-white/[0.03]' : settings.theme === 'sepia' ? 'bg-[#5b4636]/[0.02]' : 'bg-indigo-500/[0.02]'
                           }`}>
+                          <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-emerald-400/60' : 'text-emerald-600/60'}`}>{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
+                          <div className={`leading-[inherit] font-serif italic whitespace-pre-wrap flex-1 text-justify ${settings.theme === 'dark' ? 'text-white/40' : settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 'text-slate-500'
+                            }`}>
                             {filteredParallel && filteredParallel[i] ? <VerseText text={filteredParallel[i].text} theme={settings.theme} /> : <span className="opacity-20 italic">無此節對應內容</span>}
                           </div>
                         </div>
@@ -820,20 +920,27 @@ const App: React.FC = () => {
                   ))}
                 </div>
                 <div className="mt-40 border-t pt-24 text-center space-y-12">
-                  <button onClick={markCurrentAsRead} className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}>
-                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? <CheckCircle2 size={36}/> : <PartyPopper size={36}/>}
-                    {settings.completedTasks.includes(`${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`) ? "今日已讀" : "讀完了！"}
-                  </button>
+                  {(() => {
+                    const readId = currentScheduleItemId ||
+                      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+                    const isRead = settings.completedTasks.includes(readId);
+                    return (
+                      <button onClick={markCurrentAsRead} className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${isRead ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}>
+                        {isRead ? <CheckCircle2 size={36} /> : <PartyPopper size={36} />}
+                        {isRead ? "今日已讀" : "讀完了！"}
+                      </button>
+                    );
+                  })()}
                   <div className="flex flex-wrap items-center justify-center gap-6">
-                    <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18}/> 回到頂部</button>
+                    <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18} /> 回到頂部</button>
                     {navStatus.inPlan ? (
                       navStatus.nextItem && (
-                        <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">繼續讀經 <ChevronRightIcon size={20}/></button>
+                        <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label, scheduleItemId: navStatus.nextItem!.id })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">繼續讀經 <ChevronRightIcon size={20} /></button>
                       )
                     ) : (
                       <div className="flex gap-4">
-                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"><ChevronLeft size={18}/> 上一章</button>
-                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })} className="px-8 py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center gap-2 hover:bg-black transition-colors">下一章 <ChevronRight size={18}/></button>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"><ChevronLeft size={18} /> 上一章</button>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })} className="px-8 py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center gap-2 hover:bg-black transition-colors">下一章 <ChevronRight size={18} /></button>
                       </div>
                     )}
                   </div>
@@ -846,18 +953,16 @@ const App: React.FC = () => {
         </main>
       </div>
 
-      <footer className={`mt-24 py-20 border-t transition-colors duration-500 ${
-        settings.theme === 'dark' ? 'border-white/5 text-white/30' : 
-        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/50' : 
-        'border-slate-200/40 text-slate-400/80'
-      }`}>
+      <footer className={`mt-24 py-20 border-t transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 text-white/30' :
+        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/50' :
+          'border-slate-200/40 text-slate-400/80'
+        }`}>
         <div className="max-w-3xl mx-auto px-6 text-center space-y-8">
           <div className="space-y-2">
-            <h4 className={`text-xs font-black uppercase tracking-widest ${
-              settings.theme === 'dark' ? 'text-white/40' : 
-              settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 
-              'text-slate-500'
-            }`}>資料來源與版權聲明</h4>
+            <h4 className={`text-xs font-black uppercase tracking-widest ${settings.theme === 'dark' ? 'text-white/40' :
+              settings.theme === 'sepia' ? 'text-[#5b4636]/60' :
+                'text-slate-500'
+              }`}>資料來源與版權聲明</h4>
             <div className={`h-1 w-8 mx-auto rounded-full ${settings.theme === 'dark' ? 'bg-white/5' : 'bg-slate-200'}`} />
           </div>
           <div className="text-[11px] space-y-4 leading-loose font-medium opacity-60">
@@ -865,11 +970,10 @@ const App: React.FC = () => {
             <p>各聖經譯本之著作權分屬原著作權人所有，本站僅透過 API 即時呈現相關內容，僅供閱讀與學習使用。</p>
             <p>信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。<br />若您對完整資料或研經工具有興趣，請造訪 <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">信望愛官方網站</a>。</p>
           </div>
-          <div className={`pt-8 border-t border-transparent text-[10px] italic opacity-40 ${
-            settings.theme === 'dark' ? 'text-white/20' : 
-            settings.theme === 'sepia' ? 'text-[#5b4636]/30' : 
-            'text-slate-400'
-          }`}>
+          <div className={`pt-8 border-t border-transparent text-[10px] italic opacity-40 ${settings.theme === 'dark' ? 'text-white/20' :
+            settings.theme === 'sepia' ? 'text-[#5b4636]/30' :
+              'text-slate-400'
+            }`}>
             <p>本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。</p>
             <p className="mt-4 font-mono select-all" title="應用程式版本資訊">{appVersion}</p>
           </div>
@@ -885,7 +989,7 @@ const App: React.FC = () => {
                   <h3 className="text-4xl font-black tracking-tight">聖經譯本</h3>
                   <p className="text-slate-400 text-sm mt-1 font-medium">切換不同譯本以獲得更深度的理解</p>
                 </div>
-                <button onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={32}/></button>
+                <button onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={32} /></button>
               </div>
               <div className="relative">
                 <input type="text" placeholder="搜尋譯本名稱或簡稱..." className={`w-full px-8 py-5 rounded-[1.8rem] border-2 outline-none focus:border-indigo-500 transition-all font-bold ${settings.theme === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-slate-100 border-transparent'}`} value={versionSearch} onChange={(e) => setVersionSearch(e.target.value)} />
