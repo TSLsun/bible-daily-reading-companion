@@ -330,7 +330,12 @@ const App: React.FC = () => {
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        setSettings(prev => ({ ...prev, ...parsed }));
+        setSettings(prev => {
+          const newSettings = { ...prev, ...parsed };
+          // Persist the migrated data back to localStorage immediately so it only runs once.
+          localStorage.setItem('bible_settings', JSON.stringify(newSettings));
+          return newSettings;
+        });
       } catch {
         console.error("Failed to load settings");
       }
