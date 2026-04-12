@@ -1,4 +1,3 @@
-
 {
   "name": "2026 每日讀經 Companion",
   "short_name": "每日讀經",
@@ -15,5 +14,6 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "version": "1.1.0"
 }
