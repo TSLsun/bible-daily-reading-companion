@@ -463,16 +463,25 @@ const App: React.FC = () => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
     const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
-    let currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentFullId);
-    if (currentIndex === -1) {
-      currentIndex = parsedSchedule.findIndex((item: ScheduleItem) => item.id === currentBaseId);
+
+    // Multi-year support: search using the full date-prefixed ID
+    // Check currentScheduleItemId first, then try matching with selectedDate prefix for manual searches
+    const todayFullId = `${selectedDate}:${currentFullId}`;
+    const todayBaseId = `${selectedDate}:${currentBaseId}`;
+
+    const idToSearch = currentScheduleItemId || todayFullId;
+    let currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === idToSearch);
+
+    if (currentIndex === -1 && !currentScheduleItemId) {
+      currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === todayBaseId);
     }
+
     return {
       inPlan: currentIndex !== -1,
-      nextItem: currentIndex !== -1 && currentIndex < (parsedSchedule as any).length - 1 ? (parsedSchedule as any)[currentIndex + 1] : null,
-      prevItem: currentIndex > 0 ? (parsedSchedule as any)[currentIndex - 1] : null
+      nextItem: currentIndex !== -1 && currentIndex < (parsedSchedule as any[]).length - 1 ? (parsedSchedule as any[])[currentIndex + 1] : null,
+      prevItem: currentIndex > 0 ? (parsedSchedule as any[])[currentIndex - 1] : null
     };
-  }, [bibleData, parsedSchedule]);
+  }, [bibleData, parsedSchedule, currentScheduleItemId, selectedDate]);
 
   const fetchBible = async (
     refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string, scheduleItemId?: string } | null = null,
@@ -963,9 +972,18 @@ const App: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-center gap-6">
                     <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18} /> 回到頂部</button>
                     {navStatus.inPlan ? (
-                      navStatus.nextItem && (
-                        <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label, scheduleItemId: navStatus.nextItem!.id })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">繼續讀經 <ChevronRightIcon size={20} /></button>
-                      )
+                      <div className="flex flex-wrap items-center justify-center gap-4">
+                        {navStatus.prevItem && (
+                          <button onClick={() => fetchBible({ book: navStatus.prevItem!.book, chapter: navStatus.prevItem!.chapter, startVerse: navStatus.prevItem!.startVerse, endVerse: navStatus.prevItem!.endVerse, label: navStatus.prevItem!.label, scheduleItemId: navStatus.prevItem!.id })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors">
+                            <ChevronLeft size={18} /> 上一部分
+                          </button>
+                        )}
+                        {navStatus.nextItem && (
+                          <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label, scheduleItemId: navStatus.nextItem!.id })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">
+                            繼續讀經 <ChevronRightIcon size={20} />
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex gap-4">
                         <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"><ChevronLeft size={18} /> 上一章</button>
