@@ -708,10 +708,14 @@ const App: React.FC = () => {
       )}
 
       <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 transition-colors duration-500 ${themes[settings.theme]}`}>
-        <div className="flex items-center gap-3">
+        <button
+          onClick={() => window.location.reload()}
+          className="flex items-center gap-3 hover:opacity-70 transition-opacity active:scale-95"
+          title="重新整理"
+        >
           <BookOpen className="text-indigo-600" size={24} />
           <h1 className="text-lg font-bold text-indigo-600 hidden sm:block tracking-tight">2026 每日讀經</h1>
-        </div>
+        </button>
         <div className="flex items-center gap-2 flex-1 max-md:max-w-none max-w-md">
           <div className="relative flex-1">
             <input
