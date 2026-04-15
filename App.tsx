@@ -460,7 +460,7 @@ const App: React.FC = () => {
   }, [settings.scheduleMode, settings.scheduleText, selectedDate, getDayPlan, parseScheduleLine]);
 
   const navStatus = useMemo(() => {
-    if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null };
+    if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
     const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
 
@@ -476,10 +476,22 @@ const App: React.FC = () => {
       currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === todayBaseId);
     }
 
+    // Backward-compat fallback: if not found with prefix, search using bare IDs
+    // (Crucial for Static Mode and manual searches without date context)
+    if (currentIndex === -1 && !currentScheduleItemId) {
+      currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === currentFullId);
+      if (currentIndex === -1) {
+        currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === currentBaseId);
+      }
+    }
+
+    const currentItem = currentIndex !== -1 ? (parsedSchedule as ScheduleItem[])[currentIndex] : null;
+
     return {
       inPlan: currentIndex !== -1,
       nextItem: currentIndex !== -1 && currentIndex < (parsedSchedule as any[]).length - 1 ? (parsedSchedule as any[])[currentIndex + 1] : null,
-      prevItem: currentIndex > 0 ? (parsedSchedule as any[])[currentIndex - 1] : null
+      prevItem: currentIndex > 0 ? (parsedSchedule as any[])[currentIndex - 1] : null,
+      currentItemId: currentItem ? currentItem.id : null
     };
   }, [bibleData, parsedSchedule, currentScheduleItemId, selectedDate]);
 
@@ -490,18 +502,16 @@ const App: React.FC = () => {
   ) => {
     let search = refInfo;
     if (!search) {
-      if (bibleData) {
-        search = { book: bibleData.bookCode, chapter: bibleData.chapter };
-      } else {
-        const parsed = findBookCode(input);
-        const numbers = input.match(/\d+/g);
-        if (parsed && numbers) {
-          search = { book: parsed.en, chapter: parseInt(numbers[0]) };
-          if (input.includes(':') && numbers.length >= 2) {
-            search.startVerse = parseInt(numbers[1]);
-            if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
-          }
+      const parsed = findBookCode(input);
+      const numbers = input.match(/\d+/g);
+      if (parsed && numbers) {
+        search = { book: parsed.en, chapter: parseInt(numbers[0]) };
+        if (input.includes(':') && numbers.length >= 2) {
+          search.startVerse = parseInt(numbers[1]);
+          if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
         }
+      } else if (bibleData) {
+        search = { book: bibleData.bookCode, chapter: bibleData.chapter };
       }
     }
     if (!search || !search.book || !search.chapter) return;
@@ -556,9 +566,11 @@ const App: React.FC = () => {
 
   const markCurrentAsRead = () => {
     if (!bibleData) return;
-    // Prefer the date-prefixed schedule item ID if available; fall back to bare chapter ID
-    const idToMark = currentScheduleItemId ||
+    // Prefer the ID matched by navigation logic (which handles prefixes/bare fallbacks)
+    // to ensure immediate UI feedback in the sidebar/calendar.
+    const idToMark = navStatus.currentItemId || currentScheduleItemId ||
       `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+
     if (!settings.completedTasks.includes(idToMark)) {
       toggleTask(idToMark);
       showToast(`已完成：${bibleData.reference}！`);
@@ -962,17 +974,18 @@ const App: React.FC = () => {
                   ))}
                 </div>
                 <div className="mt-40 border-t pt-24 text-center space-y-12">
-                  {(() => {
-                    const readId = currentScheduleItemId ||
-                      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
-                    const isRead = settings.completedTasks.includes(readId);
-                    return (
-                      <button onClick={markCurrentAsRead} className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${isRead ? 'bg-green-600 text-white shadow-green-100' : 'bg-indigo-600 text-white shadow-indigo-100'}`}>
-                        {isRead ? <CheckCircle2 size={36} /> : <PartyPopper size={36} />}
-                        {isRead ? "今日已讀" : "讀完了！"}
-                      </button>
-                    );
-                  })()}
+                  {navStatus.inPlan && (
+                    <button
+                      onClick={markCurrentAsRead}
+                      className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId)
+                          ? 'bg-green-600 text-white shadow-green-100'
+                          : 'bg-indigo-600 text-white shadow-indigo-100'
+                        }`}
+                    >
+                      {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId) ? <CheckCircle2 size={36} /> : <PartyPopper size={36} />}
+                      {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId) ? "今日已讀" : "讀完了！"}
+                    </button>
+                  )}
                   <div className="flex flex-wrap items-center justify-center gap-6">
                     <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18} /> 回到頂部</button>
                     {navStatus.inPlan ? (
