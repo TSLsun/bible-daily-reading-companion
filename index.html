@@ -1,45 +1,65 @@
-
 <!DOCTYPE html>
 <html lang="zh-Hant">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>2026 每日讀經</title>
-  
+
   <!-- App Icons and Manifest -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
-  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
+  <link rel="apple-touch-icon"
+    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
   <link rel="manifest" href="./manifest.json">
-  
+
   <!-- Mobile Web App Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="每日讀經">
   <meta name="theme-color" content="#4f46e5">
-  
+
   <!-- Social Media Preview Tags (Open Graph) -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="2026 每日讀經">
   <meta property="og:description" content="您的每日靈修夥伴，支持多譯本對照與本地進度追蹤。">
-  <meta property="og:image" content="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
+  <meta property="og:image"
+    content="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCIgeTE9IjAiIHgyPSIxIiB5Mj0iMSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzYzNjZmMSIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzRmNDZlNSIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTEyIiBmaWxsPSJ1cmwoI2cpIi8+PHBhdGggZD0iTTI1NiAxNjB2MjU2IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTYiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgb3BhY2l0eT0iMC4zIi8+PHBhdGggZD0iTTEyOCAzNTJhMjQgMjQgMCAwIDEtMjQtMjRWMTQ0YTI0IDI0IDAgMCAxIDI0LTI0aDgwYTgwIDgwIDAgMCAxIDQ4IDE2IDgwIDgwIDAgMCAxIDQ4LTE2aDgwYTI0IDI0IDAgMCAxIDI0IDI0djE4NGEyNCAyNCAwIDAgMS0yNCAyNGgtMTA0YTQ4IDQ4IDAgMCAwLTMyIDEyIDQ4IDQ4IDAgMCAwLTMyLTEyeiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjMyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz48cGF0aCBkPSJNMjU2IDQxNlYxNzYiIHN0cm9rZT0iI2ZiYmYyNCIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Inter:wght@400;600;800&display=swap"
+    rel="stylesheet">
   <style>
-    body { 
-      font-family: 'Inter', sans-serif; 
+    body {
+      font-family: 'Inter', sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-    .font-serif { font-family: 'Noto Serif TC', serif; }
-    
-    html, body {
+
+    .font-serif {
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    html,
+    body {
       min-height: 100%;
       overflow-x: hidden;
     }
+
+    /* Handle inline Bible HTML tags */
+    .red {
+      color: #e11d48;
+    }
+
+    .explain {
+      color: #64748b;
+      font-size: 0.9em;
+      font-style: italic;
+    }
   </style>
-<script type="importmap">
+  <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
@@ -52,8 +72,10 @@
 }
 </script>
 </head>
+
 <body class="bg-slate-50 transition-colors duration-300">
   <div id="root"></div>
   <script type="module" src="./index.tsx"></script>
 </body>
+
 </html>
