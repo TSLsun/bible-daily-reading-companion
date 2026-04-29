@@ -95,12 +95,16 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
   if (text.trim() === 'a') {
     return <span className="opacity-30 italic font-sans text-[0.8em] tracking-tight">[併入上節]</span>;
   }
-  const renderInner = (innerContent: string) => {
-    return innerContent.split(/(<br\s*\/?>)/gi).map((sub, j) =>
-      /^<br/i.test(sub) ? <br key={j} /> : sub
-    );
+
+  // Helper to render content that might have inline HTML
+  const renderContent = (content: string) => {
+    if (/<[a-z][\s\S]*?>/i.test(content)) {
+      return <span dangerouslySetInnerHTML={{ __html: content }} />;
+    }
+    return content;
   };
-  const parts = text.split(/(<h2[\s\S]*?<\/h2>|<h3[\s\S]*?<\/h3>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
+
+  const parts = text.split(/(<h2[\s\S]*?<\/h2>|<h3[\s\S]*?<\/h3>|<subheading[\s\S]*?<\/subheading>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
   return (
     <>
       {parts.map((part, i) => {
@@ -110,7 +114,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
           return (
             <h2 key={i} className={`block text-xl md:text-2xl font-black mb-4 mt-2 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
               }`}>
-              {renderInner(content)}
+              {renderContent(content)}
             </h2>
           );
         }
@@ -119,15 +123,24 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
           return (
             <h3 key={i} className={`block text-lg md:text-xl font-bold mb-3 mt-1 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-500'
               }`}>
-              {renderInner(content)}
+              {renderContent(content)}
             </h3>
+          );
+        }
+        if (/^<subheading/i.test(part)) {
+          const content = part.replace(/<\/?subheading>/gi, '').trim();
+          return (
+            <h4 key={i} className={`block text-base md:text-lg font-bold mb-2 mt-1 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-200' : 'text-indigo-400'
+              }`}>
+              {renderContent(content)}
+            </h4>
           );
         }
         if (/^<u/i.test(part)) {
           const content = part.replace(/<\/?u>/gi, '').trim();
           return (
             <u key={i} className="decoration-slate-400/50 underline-offset-4">
-              {renderInner(content)}
+              {renderContent(content)}
             </u>
           );
         }
@@ -135,8 +148,12 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
           return <br key={i} />;
         }
         const prevPart = i > 0 ? parts[i - 1] : null;
-        const isHeader = prevPart && (/^<h2/i.test(prevPart) || /^<h3/i.test(prevPart));
+        const isHeader = prevPart && (/^<h2/i.test(prevPart) || /^<h3/i.test(prevPart) || /^<subheading/i.test(prevPart));
         const displayPart = isHeader ? part.replace(/^\s+/, '') : part;
+
+        if (/<[a-z][\s\S]*?>/i.test(displayPart)) {
+          return <span key={i} dangerouslySetInnerHTML={{ __html: displayPart }} />;
+        }
         return <span key={i}>{displayPart}</span>;
       })}
     </>
@@ -978,8 +995,8 @@ const App: React.FC = () => {
                     <button
                       onClick={markCurrentAsRead}
                       className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId)
-                          ? 'bg-green-600 text-white shadow-green-100'
-                          : 'bg-indigo-600 text-white shadow-indigo-100'
+                        ? 'bg-green-600 text-white shadow-green-100'
+                        : 'bg-indigo-600 text-white shadow-indigo-100'
                         }`}
                     >
                       {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId) ? <CheckCircle2 size={36} /> : <PartyPopper size={36} />}
