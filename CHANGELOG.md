@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.1](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.2.0...bible-companion-v1.2.1) (2026-04-29)
+
+
+### Bug Fixes
+
+* use chinese book abbreviations for fhl api to avoid numeric prefix bug ([5e86ea1](https://github.com/TSLsun/bible-daily-reading-companion/commit/5e86ea1f86ff7a350c650f0b48f31225f12f9c93))
+
 ## [1.2.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/v1.1.0...v1.2.0) (2026-04-15)
 
 
