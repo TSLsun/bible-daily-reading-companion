@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.2.1...bible-companion-v1.3.0) (2026-04-29)
+
+
+### Features
+
+* support &lt;subheading&gt; and other HTML text in Bible verses ([b7f1c33](https://github.com/TSLsun/bible-daily-reading-companion/commit/b7f1c331f65ea478b2520f833616697bccecbfea))
+
 ## [1.2.1](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.2.0...bible-companion-v1.2.1) (2026-04-29)
 
 
