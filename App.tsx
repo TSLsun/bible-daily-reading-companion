@@ -14,6 +14,7 @@ import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
 } from './types';
 import { findBookCode } from './bible-lookup';
+import { parseScheduleLine, getDayPlan } from './schedule-parser';
 
 // Declare the global variable injected by Vite
 declare const __APP_VERSION__: string;
@@ -389,81 +390,13 @@ const App: React.FC = () => {
   };
 
 
-  const parseScheduleLine = useCallback((line: string): ScheduleItem[] => {
-    // Split on Chinese enumeration comma 、 to support entries like "耶 52、哀 1-2"
-    const segments = line.split('、');
-    if (segments.length > 1) {
-      return segments.flatMap(seg => parseScheduleLine(seg.trim()));
-    }
-
-    const items: ScheduleItem[] = [];
-    const bookInfo = findBookCode(line);
-    if (!bookInfo) return items;
-    // Use the exact matched token length (alias or full name) to strip the prefix
-    const remaining = line.slice(bookInfo.matchedLen).trim();
-    if (remaining.includes(':')) {
-      const parts = remaining.split(':');
-      const chapter = parseInt(parts[0].trim());
-      const versePart = parts[1].trim();
-      let startVerse: number | undefined;
-      let endVerse: number | undefined;
-      if (versePart.includes('-')) {
-        const vNumbers = versePart.match(/\d+/g);
-        if (vNumbers && vNumbers.length >= 2) {
-          startVerse = parseInt(vNumbers[0]);
-          endVerse = parseInt(vNumbers[1]);
-        }
-      } else {
-        const vNum = versePart.match(/\d+/);
-        if (vNum) {
-          startVerse = parseInt(vNum[0]);
-          endVerse = startVerse;
-        }
-      }
-      const label = startVerse ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}` : `${bookInfo.zh} ${chapter}`;
-      const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
-      items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
-    } else {
-      // Only take digits from the numeric part (ignore trailing book names from 、 splits)
-      const numericPart = remaining.split(/[^\d-]/)[0];
-      const numbers = numericPart.match(/\d+/g);
-      if (numbers) {
-        if (numericPart.includes('-') && numbers.length >= 2) {
-          const start = parseInt(numbers[0]);
-          const end = parseInt(numbers[1]);
-          for (let i = start; i <= end; i++) {
-            items.push({ label: `${bookInfo.zh} ${i}`, book: bookInfo.en, chapter: i, id: `${bookInfo.en}${i}` });
-          }
-        } else {
-          numbers.forEach(n => {
-            const ch = parseInt(n);
-            items.push({ label: `${bookInfo.zh} ${ch}`, book: bookInfo.en, chapter: ch, id: `${bookInfo.en}${ch}` });
-          });
-        }
-      }
-    }
-    return items;
-  }, []);
-
-  const getDayPlan = useCallback((dateKey: string): ScheduleItem[] => {
-    try {
-      const json = JSON.parse(settings.dailyScheduleJson);
-      const sourceText = json[dateKey] || "";
-      const items = sourceText.split('\n').filter((l: string) => l.trim()).flatMap(parseScheduleLine);
-      // Prefix IDs with the dateKey (which is now YYYY-MM-DD) so they are unique
-      // across different dates and years.
-      return items.map((item: ScheduleItem) => ({ ...item, id: `${dateKey}:${item.id}` }));
-    } catch {
-      return [];
-    }
-  }, [settings.dailyScheduleJson, parseScheduleLine]);
 
   const parsedSchedule = useMemo(() => {
     if (settings.scheduleMode === 'static') {
       return settings.scheduleText.split('\n').filter(l => l.trim()).flatMap(parseScheduleLine);
     }
-    return getDayPlan(selectedDate);
-  }, [settings.scheduleMode, settings.scheduleText, selectedDate, getDayPlan, parseScheduleLine]);
+    return getDayPlan(selectedDate, settings.dailyScheduleJson);
+  }, [settings.scheduleMode, settings.scheduleText, selectedDate, settings.dailyScheduleJson]);
 
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
@@ -627,7 +560,7 @@ const App: React.FC = () => {
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(i).padStart(2, '0');
       const dateKey = `${yyyy}-${mm}-${dd}`;
-      const plan = getDayPlan(dateKey);
+      const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
       const hasPlan = plan.length > 0;
       const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
       const isFullyCompleted = hasPlan && completedCount === plan.length;
@@ -635,7 +568,7 @@ const App: React.FC = () => {
       days.push({ day: i, dateKey, hasPlan, isFullyCompleted, progress });
     }
     return days;
-  }, [currentViewDate, getDayPlan, settings.completedTasks]);
+  }, [currentViewDate, settings.dailyScheduleJson, settings.completedTasks]);
 
   const themes: Record<Theme, string> = {
     light: "bg-white text-slate-900 border-slate-200 shadow-sm",
@@ -656,7 +589,7 @@ const App: React.FC = () => {
 
   const handleDayClick = (dateKey: string) => {
     setSelectedDate(dateKey);
-    const plan = getDayPlan(dateKey);
+    const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
     if (plan.length > 0) {
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0];
