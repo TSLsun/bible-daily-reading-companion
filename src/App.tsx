@@ -13,9 +13,9 @@ import {
 import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
 } from './types';
-import { findBookCode } from './bible-lookup';
-import { parseScheduleLine, getDayPlan } from './schedule-parser';
-import { migrateScheduleJson, migrateCompletedTasks } from './migrations';
+import { findBookCode } from './utils/bible-lookup';
+import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
+import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
 
 // Declare the global variable injected by Vite
 declare const __APP_VERSION__: string;
@@ -306,7 +306,7 @@ const App: React.FC = () => {
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
-    const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse && bibleData.endVerse !== bibleData.startVerse ? '-' + bibleData.endVerse : '') : ''}`;
+    const currentFullId = buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
 
     // Multi-year support: search using the full date-prefixed ID
     // Check currentScheduleItemId first, then try matching with selectedDate prefix for manual searches
@@ -413,7 +413,7 @@ const App: React.FC = () => {
     // Prefer the ID matched by navigation logic (which handles prefixes/bare fallbacks)
     // to ensure immediate UI feedback in the sidebar/calendar.
     const idToMark = navStatus.currentItemId || currentScheduleItemId ||
-      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse && bibleData.endVerse !== bibleData.startVerse ? '-' + bibleData.endVerse : '') : ''}`;
+      buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
 
     if (!settings.completedTasks.includes(idToMark)) {
       toggleTask(idToMark);

@@ -1,4 +1,4 @@
-import { BIBLE_BOOKS, BIBLE_ALIASES } from './constants';
+import { findBookCode } from './bible-lookup';
 
 const HAS_YEAR_PREFIX = /^\d{4}-\d{2}-\d{2}:/;
 const HAS_DATE_PREFIX = /^\d{2}-\d{2}:/;
@@ -26,36 +26,23 @@ function parseBareIds(text: string): string[] {
   for (const line of lines) {
     for (const seg of line.split('、')) {
       const s = seg.trim();
-      let bookEn: string | null = null;
-      let matchedLen = 0;
-      outer: {
-        for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-          if (s.toLowerCase().startsWith(zh.toLowerCase())) {
-            bookEn = en; matchedLen = zh.length; break outer;
-          }
-        }
-        for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
-          if (s.toLowerCase().startsWith(alias.toLowerCase())) {
-            bookEn = BIBLE_BOOKS[full]; matchedLen = alias.length; break outer;
-          }
-        }
-      }
-      if (!bookEn) continue;
-      const rest = s.slice(matchedLen).trim();
+      const bookInfo = findBookCode(s);
+      if (!bookInfo) continue;
+      const rest = s.slice(bookInfo.matchedLen).trim();
       if (rest.includes(':')) {
         const [chStr, verStr] = rest.split(':');
         const ch = parseInt(chStr);
         const vNums = verStr.match(/\d+/g);
-        if (vNums && vNums.length >= 2) ids.push(`${bookEn}${ch}:${vNums[0]}-${vNums[1]}`);
-        else if (vNums) ids.push(`${bookEn}${ch}:${vNums[0]}`);
+        if (vNums && vNums.length >= 2) ids.push(`${bookInfo.en}${ch}:${vNums[0]}-${vNums[1]}`);
+        else if (vNums) ids.push(`${bookInfo.en}${ch}:${vNums[0]}`);
       } else {
         const numericPart = rest.split(/[^\d-]/)[0];
         const nums = numericPart.match(/\d+/g);
         if (!nums) continue;
         if (numericPart.includes('-') && nums.length >= 2) {
-          for (let i = parseInt(nums[0]); i <= parseInt(nums[1]); i++) ids.push(`${bookEn}${i}`);
+          for (let i = parseInt(nums[0]); i <= parseInt(nums[1]); i++) ids.push(`${bookInfo.en}${i}`);
         } else {
-          for (const n of nums) ids.push(`${bookEn}${parseInt(n)}`);
+          for (const n of nums) ids.push(`${bookInfo.en}${parseInt(n)}`);
         }
       }
     }

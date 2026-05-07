@@ -1,4 +1,4 @@
-import { BIBLE_BOOKS, BIBLE_ALIASES } from './constants';
+import { BIBLE_BOOKS, BIBLE_ALIASES } from '../constants';
 
 export function findBookCode(text: string): { en: string; zh: string; matchedLen: number } | null {
   const lowerText = text.toLowerCase().trim();

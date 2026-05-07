@@ -1,5 +1,9 @@
-import { ScheduleItem } from './types';
+import { ScheduleItem } from '../types';
 import { findBookCode } from './bible-lookup';
+
+export function buildVerseId(bookCode: string, chapter: number, startVerse?: number, endVerse?: number): string {
+  return `${bookCode}${chapter}${startVerse ? ':' + startVerse + (endVerse && endVerse !== startVerse ? '-' + endVerse : '') : ''}`;
+}
 
 export function parseScheduleLine(line: string): ScheduleItem[] {
   const segments = line.split('、');
@@ -34,7 +38,7 @@ export function parseScheduleLine(line: string): ScheduleItem[] {
     const label = startVerse
       ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}`
       : `${bookInfo.zh} ${chapter}`;
-    const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse && endVerse !== startVerse ? '-' + endVerse : '') : ''}`;
+    const id = buildVerseId(bookInfo.en, chapter, startVerse, endVerse);
     items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
   } else {
     const numericPart = remaining.split(/[^\d-]/)[0];
