@@ -401,7 +401,7 @@ const App: React.FC = () => {
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
-    const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+    const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse && bibleData.endVerse !== bibleData.startVerse ? '-' + bibleData.endVerse : '') : ''}`;
 
     // Multi-year support: search using the full date-prefixed ID
     // Check currentScheduleItemId first, then try matching with selectedDate prefix for manual searches
@@ -508,7 +508,7 @@ const App: React.FC = () => {
     // Prefer the ID matched by navigation logic (which handles prefixes/bare fallbacks)
     // to ensure immediate UI feedback in the sidebar/calendar.
     const idToMark = navStatus.currentItemId || currentScheduleItemId ||
-      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse && bibleData.endVerse !== bibleData.startVerse ? '-' + bibleData.endVerse : '') : ''}`;
 
     if (!settings.completedTasks.includes(idToMark)) {
       toggleTask(idToMark);
