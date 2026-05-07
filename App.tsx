@@ -13,6 +13,7 @@ import {
 import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
 } from './types';
+import { findBookCode } from './bible-lookup';
 
 // Declare the global variable injected by Vite
 declare const __APP_VERSION__: string;
@@ -387,18 +388,6 @@ const App: React.FC = () => {
     return updated;
   };
 
-  const findBookCode = useCallback((text: string) => {
-    const lowerText = text.toLowerCase().trim();
-    for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-      if (lowerText.startsWith(zh.toLowerCase())) return { en, zh, matchedLen: zh.length };
-    }
-    for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
-      if (lowerText.startsWith(alias.toLowerCase())) {
-        return { en: BIBLE_BOOKS[full], zh: full, matchedLen: alias.length };
-      }
-    }
-    return null;
-  }, []);
 
   const parseScheduleLine = useCallback((line: string): ScheduleItem[] => {
     // Split on Chinese enumeration comma 、 to support entries like "耶 52、哀 1-2"
@@ -454,7 +443,7 @@ const App: React.FC = () => {
       }
     }
     return items;
-  }, [findBookCode]);
+  }, []);
 
   const getDayPlan = useCallback((dateKey: string): ScheduleItem[] => {
     try {
