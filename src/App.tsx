@@ -8,11 +8,14 @@ import {
   Download, Upload
 } from 'lucide-react';
 import {
-  BIBLE_BOOKS, BIBLE_ALIASES, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
+  BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
 } from './constants';
 import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
 } from './types';
+import { findBookCode } from './utils/bible-lookup';
+import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
+import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
 
 // Declare the global variable injected by Vite
 declare const __APP_VERSION__: string;
@@ -235,117 +238,21 @@ const App: React.FC = () => {
         if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) {
           parsed.secondaryVersion = null;
         }
-        // ── Backward-compat migration ─────────────────────────────────────────
-        // v1 stored bare chapter IDs ("Ps1", "Jer52")
-        // v2 stored "MM-DD:bareId"
-        // v3 (current) stores "YYYY-MM-DD:bareId" for full multi-year support
-        // ALSO: the schedule JSON itself changed from MM-DD keys to YYYY-MM-DD.
-        const HAS_YEAR_PREFIX = /^\d{4}-\d{2}-\d{2}:/;  // v3 – fully migrated
-        const HAS_DATE_PREFIX = /^\d{2}-\d{2}:/;         // v2 – needs year prepended
-        const MIGRATION_YEAR = 2026;
-
-        // 1. Migrate the schedule JSON itself if it uses old MM-DD keys
+        // Migrate legacy schedule JSON keys (MM-DD → YYYY-MM-DD)
         if (parsed.dailyScheduleJson) {
-          try {
-            const scheduleObj = JSON.parse(parsed.dailyScheduleJson);
-            const keys = Object.keys(scheduleObj);
-            const isOldFormat = keys.length > 0 && keys.every(k => /^\d{2}-\d{2}$/.test(k));
-
-            if (isOldFormat) {
-              const upgradedSchedule: Record<string, string> = {};
-              for (const [k, v] of Object.entries(scheduleObj)) {
-                upgradedSchedule[`${MIGRATION_YEAR}-${k}`] = v as string;
-              }
-              parsed.dailyScheduleJson = JSON.stringify(upgradedSchedule, null, 2);
-              console.info(`[Migration] Upgraded schedule JSON keys to ${MIGRATION_YEAR}-MM-DD format.`);
-            }
-          } catch (e) {
-            console.warn("Failed to migrate schedule JSON keys", e);
-          }
+          parsed.dailyScheduleJson = migrateScheduleJson(parsed.dailyScheduleJson, 2026);
         }
 
-        // 2. Migrate completed tasks
-        const needsTaskMigration = (parsed.completedTasks ?? []).some(
-          (id: string) => !HAS_YEAR_PREFIX.test(id)
-        );
-
-        if (needsTaskMigration) {
+        // Migrate legacy completed task IDs (v1/v2 → v3 YYYY-MM-DD prefix)
+        if ((parsed.completedTasks ?? []).some((id: string) => !/^\d{4}-\d{2}-\d{2}:/.test(id))) {
           let schedule: Record<string, string>;
           try {
             schedule = parsed.dailyScheduleJson ? JSON.parse(parsed.dailyScheduleJson) : DEFAULT_DAILY_SCHEDULE;
           } catch {
             schedule = DEFAULT_DAILY_SCHEDULE;
           }
-
-          // Helper to parse bare chapter IDs from a schedule text line.
-          const parseBareIds = (text: string): string[] => {
-            const ids: string[] = [];
-            const lines = text.split('\n').filter(Boolean);
-            for (const line of lines) {
-              for (const seg of line.split('、')) {
-                const s = seg.trim();
-                let bookEn: string | null = null;
-                let matchedLen = 0;
-                outer: {
-                  for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-                    if (s.toLowerCase().startsWith(zh.toLowerCase())) {
-                      bookEn = en; matchedLen = zh.length; break outer;
-                    }
-                  }
-                  for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
-                    if (s.toLowerCase().startsWith(alias.toLowerCase())) {
-                      bookEn = BIBLE_BOOKS[full]; matchedLen = alias.length; break outer;
-                    }
-                  }
-                }
-                if (!bookEn) continue;
-                const rest = s.slice(matchedLen).trim();
-                if (rest.includes(':')) {
-                  const [chStr, verStr] = rest.split(':');
-                  const ch = parseInt(chStr);
-                  const vNums = verStr.match(/\d+/g);
-                  if (vNums && vNums.length >= 2) ids.push(`${bookEn}${ch}:${vNums[0]}-${vNums[1]}`);
-                  else if (vNums) ids.push(`${bookEn}${ch}:${vNums[0]}`);
-                } else {
-                  const numericPart = rest.split(/[^\d-]/)[0];
-                  const nums = numericPart.match(/\d+/g);
-                  if (!nums) continue;
-                  if (numericPart.includes('-') && nums.length >= 2) {
-                    for (let i = parseInt(nums[0]); i <= parseInt(nums[1]); i++) ids.push(`${bookEn}${i}`);
-                  } else {
-                    for (const n of nums) ids.push(`${bookEn}${parseInt(n)}`);
-                  }
-                }
-              }
-            }
-            return ids;
-          };
-
-          // Build bare-id → full date-prefixed id map for the entire schedule.
-          const bareToFull = new Map<string, string>();
-          const dateToFull = new Map<string, string>();
-          for (const [dateKey, text] of Object.entries(schedule)) {
-            const mmDdKey = dateKey.length === 10 ? dateKey.slice(5) : dateKey;
-            for (const bareId of parseBareIds(text)) {
-              const fullId = `${dateKey}:${bareId}`;
-              if (!bareToFull.has(bareId)) bareToFull.set(bareId, fullId);
-              dateToFull.set(`${mmDdKey}:${bareId}`, fullId);
-            }
-          }
-
-          const before = (parsed.completedTasks ?? []).length;
-          const migrated: string[] = (parsed.completedTasks ?? []).map((id: string) => {
-            if (HAS_YEAR_PREFIX.test(id)) return id;               // v3 – already done
-            if (HAS_DATE_PREFIX.test(id))                          // v2 – prepend year
-              return dateToFull.get(id) ?? `${MIGRATION_YEAR}-${id}`;
-            return bareToFull.get(id) ?? id;                       // v1 – full lookup
-          });
-
-          parsed.completedTasks = migrated;
-          const converted = migrated.filter((id: string) => HAS_YEAR_PREFIX.test(id)).length;
-          console.info(`[Migration] ${before} task record(s) → ${converted} converted to YYYY-MM-DD format.`);
+          parsed.completedTasks = migrateCompletedTasks(parsed.completedTasks ?? [], schedule);
         }
-        // ─────────────────────────────────────────────────────────────────────
 
         setSettings(prev => {
           const newSettings = { ...prev, ...parsed };
@@ -387,99 +294,19 @@ const App: React.FC = () => {
     return updated;
   };
 
-  const findBookCode = useCallback((text: string) => {
-    const lowerText = text.toLowerCase().trim();
-    for (const [zh, en] of Object.entries(BIBLE_BOOKS)) {
-      if (lowerText.startsWith(zh.toLowerCase())) return { en, zh, matchedLen: zh.length };
-    }
-    for (const [alias, full] of Object.entries(BIBLE_ALIASES)) {
-      if (lowerText.startsWith(alias.toLowerCase())) {
-        return { en: BIBLE_BOOKS[full], zh: full, matchedLen: alias.length };
-      }
-    }
-    return null;
-  }, []);
 
-  const parseScheduleLine = useCallback((line: string): ScheduleItem[] => {
-    // Split on Chinese enumeration comma 、 to support entries like "耶 52、哀 1-2"
-    const segments = line.split('、');
-    if (segments.length > 1) {
-      return segments.flatMap(seg => parseScheduleLine(seg.trim()));
-    }
-
-    const items: ScheduleItem[] = [];
-    const bookInfo = findBookCode(line);
-    if (!bookInfo) return items;
-    // Use the exact matched token length (alias or full name) to strip the prefix
-    const remaining = line.slice(bookInfo.matchedLen).trim();
-    if (remaining.includes(':')) {
-      const parts = remaining.split(':');
-      const chapter = parseInt(parts[0].trim());
-      const versePart = parts[1].trim();
-      let startVerse: number | undefined;
-      let endVerse: number | undefined;
-      if (versePart.includes('-')) {
-        const vNumbers = versePart.match(/\d+/g);
-        if (vNumbers && vNumbers.length >= 2) {
-          startVerse = parseInt(vNumbers[0]);
-          endVerse = parseInt(vNumbers[1]);
-        }
-      } else {
-        const vNum = versePart.match(/\d+/);
-        if (vNum) {
-          startVerse = parseInt(vNum[0]);
-          endVerse = startVerse;
-        }
-      }
-      const label = startVerse ? `${bookInfo.zh} ${chapter}:${startVerse}${endVerse && endVerse !== startVerse ? '-' + endVerse : ''}` : `${bookInfo.zh} ${chapter}`;
-      const id = `${bookInfo.en}${chapter}${startVerse ? ':' + startVerse + (endVerse ? '-' + endVerse : '') : ''}`;
-      items.push({ label, book: bookInfo.en, chapter, id, startVerse, endVerse });
-    } else {
-      // Only take digits from the numeric part (ignore trailing book names from 、 splits)
-      const numericPart = remaining.split(/[^\d-]/)[0];
-      const numbers = numericPart.match(/\d+/g);
-      if (numbers) {
-        if (numericPart.includes('-') && numbers.length >= 2) {
-          const start = parseInt(numbers[0]);
-          const end = parseInt(numbers[1]);
-          for (let i = start; i <= end; i++) {
-            items.push({ label: `${bookInfo.zh} ${i}`, book: bookInfo.en, chapter: i, id: `${bookInfo.en}${i}` });
-          }
-        } else {
-          numbers.forEach(n => {
-            const ch = parseInt(n);
-            items.push({ label: `${bookInfo.zh} ${ch}`, book: bookInfo.en, chapter: ch, id: `${bookInfo.en}${ch}` });
-          });
-        }
-      }
-    }
-    return items;
-  }, [findBookCode]);
-
-  const getDayPlan = useCallback((dateKey: string): ScheduleItem[] => {
-    try {
-      const json = JSON.parse(settings.dailyScheduleJson);
-      const sourceText = json[dateKey] || "";
-      const items = sourceText.split('\n').filter((l: string) => l.trim()).flatMap(parseScheduleLine);
-      // Prefix IDs with the dateKey (which is now YYYY-MM-DD) so they are unique
-      // across different dates and years.
-      return items.map((item: ScheduleItem) => ({ ...item, id: `${dateKey}:${item.id}` }));
-    } catch {
-      return [];
-    }
-  }, [settings.dailyScheduleJson, parseScheduleLine]);
 
   const parsedSchedule = useMemo(() => {
     if (settings.scheduleMode === 'static') {
       return settings.scheduleText.split('\n').filter(l => l.trim()).flatMap(parseScheduleLine);
     }
-    return getDayPlan(selectedDate);
-  }, [settings.scheduleMode, settings.scheduleText, selectedDate, getDayPlan, parseScheduleLine]);
+    return getDayPlan(selectedDate, settings.dailyScheduleJson);
+  }, [settings.scheduleMode, settings.scheduleText, selectedDate, settings.dailyScheduleJson]);
 
   const navStatus = useMemo(() => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
-    const currentFullId = `${currentBaseId}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+    const currentFullId = buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
 
     // Multi-year support: search using the full date-prefixed ID
     // Check currentScheduleItemId first, then try matching with selectedDate prefix for manual searches
@@ -586,7 +413,7 @@ const App: React.FC = () => {
     // Prefer the ID matched by navigation logic (which handles prefixes/bare fallbacks)
     // to ensure immediate UI feedback in the sidebar/calendar.
     const idToMark = navStatus.currentItemId || currentScheduleItemId ||
-      `${bibleData.bookCode}${bibleData.chapter}${bibleData.startVerse ? ':' + bibleData.startVerse + (bibleData.endVerse ? '-' + bibleData.endVerse : '') : ''}`;
+      buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
 
     if (!settings.completedTasks.includes(idToMark)) {
       toggleTask(idToMark);
@@ -638,7 +465,7 @@ const App: React.FC = () => {
       const mm = String(month + 1).padStart(2, '0');
       const dd = String(i).padStart(2, '0');
       const dateKey = `${yyyy}-${mm}-${dd}`;
-      const plan = getDayPlan(dateKey);
+      const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
       const hasPlan = plan.length > 0;
       const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
       const isFullyCompleted = hasPlan && completedCount === plan.length;
@@ -646,7 +473,7 @@ const App: React.FC = () => {
       days.push({ day: i, dateKey, hasPlan, isFullyCompleted, progress });
     }
     return days;
-  }, [currentViewDate, getDayPlan, settings.completedTasks]);
+  }, [currentViewDate, settings.dailyScheduleJson, settings.completedTasks]);
 
   const themes: Record<Theme, string> = {
     light: "bg-white text-slate-900 border-slate-200 shadow-sm",
@@ -667,7 +494,7 @@ const App: React.FC = () => {
 
   const handleDayClick = (dateKey: string) => {
     setSelectedDate(dateKey);
-    const plan = getDayPlan(dateKey);
+    const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
     if (plan.length > 0) {
       const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
       const targetItem = firstUncompleted || plan[0];
