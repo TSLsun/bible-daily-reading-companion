@@ -1,3 +1,25 @@
+# README Update Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the placeholder AI Studio README with a polished, accurate README covering the project's purpose, features, tech stack, and dev setup.
+
+**Architecture:** Single file rewrite — `README.md` at the repo root. No code changes; no tests required. One task, one commit.
+
+**Tech Stack:** Markdown, GitHub Flavored Markdown badges (shields.io)
+
+---
+
+### Task 1: Write the new README.md
+
+**Files:**
+- Modify: `README.md`
+
+- [ ] **Step 1: Replace README.md with the following content**
+
+Write the file at `README.md` with this exact content:
+
+```markdown
 # Bible Daily Reading Companion
 
 > A daily Bible reading tracker supporting Traditional Chinese and English Bible translations
@@ -22,22 +44,36 @@ Bible Daily Reading Companion is a no-backend single-page web app for following 
 - [React 19](https://react.dev) + TypeScript
 - [Vite](https://vite.dev)
 - [Tailwind CSS](https://tailwindcss.com) (via CDN)
-- [FHL Bible API](https://bible.fhl.net)
+- [FHL Bible API](https://bible.fhl.net) (`bible.fhl.net`)
 - Deployed via GitHub Actions to [GitHub Pages](https://pages.github.com)
 
 ## Getting Started
 
-**Prerequisites:** Node.js 18+
+**Prerequisites:** Node.js
 
 ```bash
 npm install       # Install dependencies
 npm run dev       # Start dev server (http://localhost:5173)
 npm run build     # Type-check + build to dist/
 npm run preview   # Preview production build locally
-npm run lint      # Run ESLint
-npm run test      # Run unit tests
 ```
 
 ---
 
 > Originally scaffolded with [Google AI Studio](https://ai.studio/apps/drive/1kqR0DqtDYMaP9eTFZp1YTmNVuHRB9Vk7)
+```
+
+- [ ] **Step 2: Verify the file looks correct**
+
+Open `README.md` and confirm:
+- Title and tagline are present
+- Both badges render (live site + release version)
+- All 6 sections are present: About, Features, Tech Stack, Getting Started, origin note
+- No leftover AI Studio content (no "Gemini", no Drive link in the body)
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add README.md
+git commit -m "docs: rewrite README with accurate project description and setup guide"
+```
