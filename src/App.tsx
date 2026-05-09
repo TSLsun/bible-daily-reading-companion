@@ -5,7 +5,7 @@ import {
   AlertCircle, Type, Sun, Moon, Coffee, X,
   PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
-  Download, Upload
+  Download, Upload, BookMarked, CalendarDays
 } from 'lucide-react';
 import {
   BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
@@ -339,6 +339,21 @@ const App: React.FC = () => {
     };
   }, [bibleData, parsedSchedule, currentScheduleItemId, selectedDate]);
 
+  const nextDayWithPlan = useMemo(() => {
+    if (settings.scheduleMode !== 'daily') return null;
+    try {
+      const schedule = JSON.parse(settings.dailyScheduleJson);
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
+      const currentIdx = dates.indexOf(selectedDate);
+      if (currentIdx === -1) return null;
+      for (let i = currentIdx + 1; i < dates.length; i++) {
+        if (schedule[dates[i]] && schedule[dates[i]].trim()) return dates[i];
+      }
+    } catch { /* ignore */ }
+    return null;
+  }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
+
   const fetchBible = async (
     refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string, scheduleItemId?: string } | null = null,
     customPrimary?: string,
@@ -512,6 +527,33 @@ const App: React.FC = () => {
     handleDayClick(dateKey);
   };
 
+  const goToFirstUnfinished = () => {
+    try {
+      const schedule = JSON.parse(settings.dailyScheduleJson);
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      const dates = Object.keys(schedule)
+        .filter(k => k.startsWith(yearPrefix))
+        .sort();
+      for (const dateKey of dates) {
+        const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
+        if (plan.some((item: ScheduleItem) => !settings.completedTasks.includes(item.id))) {
+          const [y, m, d] = dateKey.split('-').map(Number);
+          setCurrentViewDate(new Date(y, m - 1, d));
+          handleDayClick(dateKey);
+          return;
+        }
+      }
+      showToast('本年度讀經計劃已全部完成！');
+    } catch { /* ignore */ }
+  };
+
+  const goToNextDay = () => {
+    if (!nextDayWithPlan) return;
+    const [y, m, d] = nextDayWithPlan.split('-').map(Number);
+    setCurrentViewDate(new Date(y, m - 1, d));
+    handleDayClick(nextDayWithPlan);
+  };
+
   const handleMonthSelect = (m: number) => {
     setCurrentViewDate(new Date(currentViewDate.getFullYear(), m, 1));
     setIsMonthPickerOpen(false);
@@ -606,6 +648,9 @@ const App: React.FC = () => {
               </button>
               <div className="flex gap-1">
                 <button onClick={goToTodayInPlan} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="回到今天 (2026)"><Target size={16} /></button>
+                {settings.scheduleMode === 'daily' && (
+                  <button onClick={goToFirstUnfinished} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="找到第一個未完成的日子"><BookMarked size={16} /></button>
+                )}
                 <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16} /></button>
               </div>
             </div>
@@ -834,14 +879,14 @@ const App: React.FC = () => {
                     <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18} /> 回到頂部</button>
                     {navStatus.inPlan ? (
                       <div className="flex flex-wrap items-center justify-center gap-4">
-                        {navStatus.prevItem && (
-                          <button onClick={() => fetchBible({ book: navStatus.prevItem!.book, chapter: navStatus.prevItem!.chapter, startVerse: navStatus.prevItem!.startVerse, endVerse: navStatus.prevItem!.endVerse, label: navStatus.prevItem!.label, scheduleItemId: navStatus.prevItem!.id })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors">
-                            <ChevronLeft size={18} /> 上一部分
-                          </button>
-                        )}
                         {navStatus.nextItem && (
                           <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label, scheduleItemId: navStatus.nextItem!.id })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">
                             繼續讀經 <ChevronRightIcon size={20} />
+                          </button>
+                        )}
+                        {!navStatus.nextItem && nextDayWithPlan && (
+                          <button onClick={goToNextDay} className="px-10 py-4 rounded-2xl bg-slate-700 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-slate-800 hover:translate-x-1 transition-all">
+                            前往下一天 <CalendarDays size={20} />
                           </button>
                         )}
                       </div>
