@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   BookOpen, Search, CheckCircle2,
   AlertCircle, Type, Sun, Moon, Coffee, X,
-  PartyPopper, ChevronUp, ChevronRight, Settings,
+  PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
   Download, Upload, BookMarked, CalendarDays
 } from 'lucide-react';
