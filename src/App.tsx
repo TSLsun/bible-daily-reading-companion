@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   BookOpen, Search, CheckCircle2,
   AlertCircle, Type, Sun, Moon, Coffee, X,
-  PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
+  PartyPopper, ChevronUp, ChevronRight, Settings,
   FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
   Download, Upload, BookMarked, CalendarDays
 } from 'lucide-react';
@@ -343,7 +343,8 @@ const App: React.FC = () => {
     if (settings.scheduleMode !== 'daily') return null;
     try {
       const schedule = JSON.parse(settings.dailyScheduleJson);
-      const dates = Object.keys(schedule).sort();
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
       const currentIdx = dates.indexOf(selectedDate);
       if (currentIdx === -1) return null;
       for (let i = currentIdx + 1; i < dates.length; i++) {
@@ -544,6 +545,13 @@ const App: React.FC = () => {
       }
       showToast('本年度讀經計劃已全部完成！');
     } catch { /* ignore */ }
+  };
+
+  const goToNextDay = () => {
+    if (!nextDayWithPlan) return;
+    const [y, m, d] = nextDayWithPlan.split('-').map(Number);
+    setCurrentViewDate(new Date(y, m - 1, d));
+    handleDayClick(nextDayWithPlan);
   };
 
   const handleMonthSelect = (m: number) => {
@@ -877,7 +885,7 @@ const App: React.FC = () => {
                           </button>
                         )}
                         {!navStatus.nextItem && nextDayWithPlan && (
-                          <button onClick={() => { const [y, m, d] = nextDayWithPlan.split('-').map(Number); setCurrentViewDate(new Date(y, m - 1, d)); handleDayClick(nextDayWithPlan); }} className="px-10 py-4 rounded-2xl bg-slate-700 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-slate-800 hover:translate-x-1 transition-all">
+                          <button onClick={goToNextDay} className="px-10 py-4 rounded-2xl bg-slate-700 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-slate-800 hover:translate-x-1 transition-all">
                             前往下一天 <CalendarDays size={20} />
                           </button>
                         )}
