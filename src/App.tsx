@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  BookOpen, Search, CheckCircle2,
-  AlertCircle, Type, Sun, Moon, Coffee, X,
-  PartyPopper, ChevronUp, ChevronRight, ChevronLeft, Settings,
-  FileText, Save, Target, ChevronDown, ChevronRight as ChevronRightIcon,
-  Download, Upload, BookMarked, CalendarDays
+  Search, CheckCircle2, AlertCircle, BookOpen,
+  Sun, Moon, Coffee, X, PartyPopper, ChevronUp,
+  ChevronRight, ChevronLeft, ChevronDown, Settings,
+  Save, Download, Upload, Target, BookMarked,
+  CalendarDays, List, Type,
 } from 'lucide-react';
 import {
   BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
@@ -17,89 +17,98 @@ import { findBookCode } from './utils/bible-lookup';
 import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
 import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
 
-// Declare the global variable injected by Vite
 declare const __APP_VERSION__: string;
 
-const LoadingView: React.FC<{ theme: Theme }> = ({ theme }) => {
-  const containerBg = {
-    light: "bg-indigo-50 border-indigo-100",
-    sepia: "bg-[#f4ecd8] border-[#eaddc0]",
-    dark: "bg-white/5 border-white/5"
-  };
+// ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 
-  const iconColor = {
-    light: "text-indigo-600",
-    sepia: "text-[#5b4636]",
-    dark: "text-indigo-400"
-  };
-
-  const textClasses = {
-    light: "text-indigo-600/60",
-    sepia: "text-[#5b4636]/60",
-    dark: "text-white/30"
-  };
-
-  return (
-    <div className="flex flex-col items-center justify-center h-[75vh] animate-in fade-in duration-500">
-      <div className="relative mb-12">
-        <div className={`p-10 rounded-[3rem] border-2 shadow-2xl relative z-10 animate-pulse transition-all duration-500 ${containerBg[theme]}`}>
-          <BookOpen className={`transition-colors duration-500 ${iconColor[theme]}`} size={64} />
-        </div>
-        <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/20 rounded-full blur-xl animate-pulse"></div>
-        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl animate-pulse"></div>
-      </div>
-      <p className={`text-xs font-black uppercase tracking-[0.3em] animate-pulse transition-colors duration-500 ${textClasses[theme]}`}>
-        正在開啟聖經卷軸
-      </p>
-    </div>
-  );
+type TK = {
+  bg: string; surface: string; panel: string;
+  ink: string; inkSoft: string; muted: string;
+  faint: string; line: string; lineStrong: string;
+  pill: string; success: string;
 };
 
-const EmptyState: React.FC<{ theme: Theme }> = ({ theme }) => {
-  const containerBg = {
-    light: "bg-indigo-50 border-indigo-100",
-    sepia: "bg-[#f4ecd8] border-[#eaddc0]",
-    dark: "bg-white/5 border-white/5"
-  };
+const T: Record<Theme, TK> = {
+  sepia: {
+    bg: '#f6efde', surface: '#fbf5e6', panel: '#f1e8d2',
+    ink: '#2a2114', inkSoft: '#5b4a32', muted: '#8a7758',
+    faint: '#b8a583',
+    line: 'rgba(91,70,54,0.12)', lineStrong: 'rgba(91,70,54,0.22)',
+    pill: 'rgba(91,70,54,0.08)', success: '#5a7a44',
+  },
+  light: {
+    bg: '#fafaf7', surface: '#ffffff', panel: '#f3f1eb',
+    ink: '#1a1a17', inkSoft: '#4a4a44', muted: '#7a7a72',
+    faint: '#c4c4bc',
+    line: 'rgba(0,0,0,0.08)', lineStrong: 'rgba(0,0,0,0.14)',
+    pill: 'rgba(0,0,0,0.05)', success: '#4a6b3a',
+  },
+  dark: {
+    bg: '#1a1814', surface: '#23201a', panel: '#2d2a22',
+    ink: '#e8e0cc', inkSoft: '#b5ab93', muted: '#857d68',
+    faint: '#4d4536',
+    line: 'rgba(232,224,204,0.10)', lineStrong: 'rgba(232,224,204,0.20)',
+    pill: 'rgba(232,224,204,0.06)', success: '#8aa872',
+  },
+} as const;
 
-  const iconColor = {
-    light: "text-indigo-600/40",
-    sepia: "text-[#5b4636]/40",
-    dark: "text-white/20"
-  };
+const A = { base: '#1e3a5f', soft: '#3a5d8a', tint: 'rgba(30,58,95,0.10)' };
 
-  return (
-    <div className="flex flex-col items-center justify-center h-[75vh] text-center p-10 animate-in fade-in zoom-in-95 duration-700">
-      <div className="relative mb-12">
-        <div className={`p-10 rounded-[3rem] border-2 transition-all duration-500 ${containerBg[theme]}`}>
-          <BookOpen
-            size={84}
-            strokeWidth={1.5}
-            className={`transition-colors duration-500 ${iconColor[theme]}`}
-          />
-        </div>
-        <div className="absolute -top-4 -right-4 w-12 h-12 bg-amber-400/10 rounded-full blur-xl"></div>
-        <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl"></div>
-      </div>
-      <h3 className={`text-4xl font-black tracking-tight mb-5 transition-colors duration-500 opacity-50 ${theme === 'dark' ? 'text-white/60' : 'text-slate-800/80'
-        }`}>
-        靈修從此刻開始
-      </h3>
-      <p className={`max-w-sm text-base font-medium leading-relaxed transition-colors duration-500 ${theme === 'dark' ? 'text-white/30' : 'text-slate-400'
-        }`}>
-        選擇左側日曆中的日期或搜尋書卷，<br />
-        開啟您與真理的對話空間。
-      </p>
-    </div>
-  );
+const F = {
+  serif: `"Noto Serif TC","Source Han Serif TC",Georgia,"Times New Roman",serif`,
+  sans:  `"Noto Sans TC","PingFang TC","Heiti TC",ui-sans-serif,system-ui,sans-serif`,
+  label: `"Inter",ui-sans-serif,system-ui,sans-serif`,
 };
+
+const PAPER_NOISE = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.28  0 0 0 0 0.18  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>`
+)}`;
+
+// ─── STYLE HELPERS ───────────────────────────────────────────────────────────
+
+function iconBtn(t: TK): React.CSSProperties {
+  return {
+    appearance: 'none', border: 'none', cursor: 'pointer',
+    background: 'transparent', color: t.muted,
+    width: 26, height: 26, borderRadius: 6,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  };
+}
+
+function modeBtn(active: boolean, t: TK): React.CSSProperties {
+  return {
+    appearance: 'none', border: 'none', cursor: 'pointer',
+    padding: '5px 8px', borderRadius: 6,
+    background: active ? t.surface : 'transparent',
+    color: active ? t.ink : t.muted,
+    boxShadow: active ? `0 1px 0 ${t.line}` : 'none',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all .12s ease',
+  };
+}
+
+function navBtn(accent: boolean, t: TK): React.CSSProperties {
+  return {
+    appearance: 'none', cursor: 'pointer',
+    padding: '10px 18px', borderRadius: 8,
+    border: accent ? 'none' : `1px solid ${t.line}`,
+    background: accent ? A.tint : 'transparent',
+    color: accent ? A.base : t.inkSoft,
+    fontFamily: F.sans, fontSize: 13, fontWeight: 500,
+    display: 'inline-flex', alignItems: 'center', gap: 6,
+    letterSpacing: '0.01em',
+    transition: 'all .12s ease',
+  };
+}
+
+// ─── VERSE TEXT ──────────────────────────────────────────────────────────────
 
 const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) => {
   if (text.trim() === 'a') {
-    return <span className="opacity-30 italic font-sans text-[0.8em] tracking-tight">[併入上節]</span>;
+    return <span style={{ opacity: 0.3, fontStyle: 'italic', fontSize: '0.8em' }}>[併入上節]</span>;
   }
 
-  // Helper to render content that might have inline HTML
   const renderContent = (content: string) => {
     if (/<[a-z][\s\S]*?>/i.test(content)) {
       return <span dangerouslySetInnerHTML={{ __html: content }} />;
@@ -108,6 +117,8 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
   };
 
   const parts = text.split(/(<h2[\s\S]*?<\/h2>|<h3[\s\S]*?<\/h3>|<subheading[\s\S]*?<\/subheading>|<u[\s\S]*?<\/u>|<br\s*\/?>)/gi);
+  const t = T[theme];
+
   return (
     <>
       {parts.map((part, i) => {
@@ -115,44 +126,40 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
         if (/^<h2/i.test(part)) {
           const content = part.replace(/<\/?h2>/gi, '').trim();
           return (
-            <h2 key={i} className={`block text-xl md:text-2xl font-black mb-4 mt-2 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'
-              }`}>
-              {renderContent(content)}
-            </h2>
+            <h2 key={i} style={{
+              display: 'block', fontSize: '1.2em', fontWeight: 700,
+              marginBottom: '0.5em', marginTop: '0.3em',
+              color: A.base, letterSpacing: '-0.01em',
+            }}>{renderContent(content)}</h2>
           );
         }
         if (/^<h3/i.test(part)) {
           const content = part.replace(/<\/?h3>/gi, '').trim();
           return (
-            <h3 key={i} className={`block text-lg md:text-xl font-bold mb-3 mt-1 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-500'
-              }`}>
-              {renderContent(content)}
-            </h3>
+            <h3 key={i} style={{
+              display: 'block', fontSize: '1.1em', fontWeight: 600,
+              marginBottom: '0.4em', marginTop: '0.2em', color: A.soft,
+            }}>{renderContent(content)}</h3>
           );
         }
         if (/^<subheading/i.test(part)) {
           const content = part.replace(/<\/?subheading>/gi, '').trim();
           return (
-            <h4 key={i} className={`block text-base md:text-lg font-bold mb-2 mt-1 tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-indigo-200' : 'text-indigo-400'
-              }`}>
-              {renderContent(content)}
-            </h4>
+            <h4 key={i} style={{
+              display: 'block', fontSize: '1em', fontWeight: 600,
+              marginBottom: '0.3em', marginTop: '0.1em', color: t.inkSoft,
+            }}>{renderContent(content)}</h4>
           );
         }
         if (/^<u/i.test(part)) {
           const content = part.replace(/<\/?u>/gi, '').trim();
-          return (
-            <u key={i} className="decoration-slate-400/50 underline-offset-4">
-              {renderContent(content)}
-            </u>
-          );
+          return <u key={i} style={{ textDecorationColor: 'rgba(0,0,0,0.3)', textUnderlineOffset: 3 }}>{renderContent(content)}</u>;
         }
-        if (/^<br/i.test(part)) {
-          return <br key={i} />;
-        }
+        if (/^<br/i.test(part)) return <br key={i} />;
+
         const prevPart = i > 0 ? parts[i - 1] : null;
-        const isHeader = prevPart && (/^<h2/i.test(prevPart) || /^<h3/i.test(prevPart) || /^<subheading/i.test(prevPart));
-        const displayPart = isHeader ? part.replace(/^\s+/, '') : part;
+        const isAfterHeader = prevPart && (/^<h[23]/i.test(prevPart) || /^<subheading/i.test(prevPart));
+        const displayPart = isAfterHeader ? part.replace(/^\s+/, '') : part;
 
         if (/<[a-z][\s\S]*?>/i.test(displayPart)) {
           return <span key={i} dangerouslySetInnerHTML={{ __html: displayPart }} />;
@@ -163,41 +170,117 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
   );
 };
 
+// ─── BOOK PAGE VERSES ────────────────────────────────────────────────────────
+
+const BookPageVerses: React.FC<{
+  verses: BibleVerse[];
+  theme: Theme;
+  fontSize: number;
+  lineHeight: number;
+}> = ({ verses, theme, fontSize, lineHeight }) => {
+  const t: TK = T[theme];
+  const baseSize = fontSize + 1;
+  const sup: React.CSSProperties = {
+    fontFamily: F.label, fontSize: 10, fontWeight: 600,
+    color: A.base, marginRight: 3, marginLeft: 2,
+    verticalAlign: 'super', letterSpacing: '0.02em',
+    fontVariantNumeric: 'tabular-nums',
+  };
+
+  if (!verses.length) return null;
+
+  const firstChar = verses[0].text[0] ?? '';
+  const firstRest = verses[0].text.slice(1);
+
+  return (
+    <div style={{
+      fontFamily: F.serif, fontSize: baseSize,
+      lineHeight: lineHeight + 0.05, color: t.ink,
+      textAlign: 'justify', hyphens: 'auto',
+    }}>
+      {/* Opening paragraph with drop cap */}
+      <p style={{ margin: '0 0 1.2em' }}>
+        <span style={{
+          float: 'left', fontFamily: F.serif,
+          fontSize: baseSize * 4, lineHeight: 0.88,
+          color: A.base, fontWeight: 600,
+          marginRight: 12, marginTop: 6, letterSpacing: '-0.02em',
+        }}>{firstChar}</span>
+        <sup style={sup}>1</sup>
+        <VerseText text={firstRest} theme={theme} />{' '}
+        {verses.slice(1, 3).map(v => (
+          <React.Fragment key={v.verse}>
+            <sup style={sup}>{v.verse}</sup>
+            <VerseText text={v.text} theme={theme} />{' '}
+          </React.Fragment>
+        ))}
+      </p>
+
+      {/* Remaining verses as continuous text */}
+      {verses.length > 3 && (
+        <p style={{ margin: '0 0 1.2em', clear: 'both' }}>
+          {verses.slice(3).map((v, i) => (
+            <React.Fragment key={v.verse}>
+              {i > 0 && ' '}
+              <sup style={sup}>{v.verse}</sup>
+              <VerseText text={v.text} theme={theme} />
+            </React.Fragment>
+          ))}
+        </p>
+      )}
+
+      {/* End ornament */}
+      <div style={{
+        marginTop: 32, textAlign: 'center',
+        color: t.faint, fontSize: 20, clear: 'both',
+      }}>❦</div>
+    </div>
+  );
+};
+
+// ─── APP ─────────────────────────────────────────────────────────────────────
+
 const App: React.FC = () => {
+  // ── State ──────────────────────────────────────────────────────────────────
   const [settings, setSettings] = useState<AppSettings>({
     scheduleText: "馬太福音 1-3\n詩篇 1",
     dailyScheduleJson: JSON.stringify(DEFAULT_DAILY_SCHEDULE, null, 2),
     scheduleMode: 'daily',
     completedTasks: [],
     fontSize: 18,
-    lineHeight: 1.6, // Updated default to 1.6
-    theme: 'light',
+    lineHeight: 1.75,
+    theme: 'sepia',
     primaryVersion: 'unv',
     secondaryVersion: null,
-    scheduleHash: ""
+    scheduleHash: "",
   });
 
   const [input, setInput] = useState('');
   const [migrationInput, setMigrationInput] = useState('');
   const [availableVersions] = useState<VersionInfo[]>(FALLBACK_VERSIONS);
-  const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean, target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
-  const [isTypeSettingsOpen, setIsTypeSettingsOpen] = useState(false);
+  const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean; target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
   const [versionSearch, setVersionSearch] = useState('');
   const [bibleData, setBibleData] = useState<BibleData | null>(null);
   const [parallelData, setParallelData] = useState<BibleVerse[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Layout & UI state
+  const [railOpen, setRailOpen] = useState(true);
+  const [readingMode, setReadingMode] = useState<'standard' | 'book'>('standard');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(true);
-  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
-  // Tracks the date-prefixed schedule item ID currently being read, so
-  // "讀完了！" marks the correct plan entry (not a bare chapter-only ID).
   const [currentScheduleItemId, setCurrentScheduleItemId] = useState<string | null>(null);
-  const monthPickerRef = useRef<HTMLDivElement>(null);
-  const typeSettingsRef = useRef<HTMLDivElement>(null);
+  const [showImportField, setShowImportField] = useState(false);
+
+  // Refs
+  const settingsRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
 
   const PLAN_YEAR = 2026;
+
   const [currentViewDate, setCurrentViewDate] = useState(() => {
     const today = new Date();
     if (today.getFullYear() !== PLAN_YEAR) return new Date(PLAN_YEAR, 0, 1);
@@ -206,21 +289,19 @@ const App: React.FC = () => {
 
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
-    // Use full YYYY-MM-DD for selected date to match new schedule keys
-    const targetDate = today.getFullYear() === PLAN_YEAR ? today : new Date(PLAN_YEAR, 0, 1);
-
-    const yyyy = targetDate.getFullYear();
-    const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(targetDate.getDate()).padStart(2, '0');
+    const target = today.getFullYear() === PLAN_YEAR ? today : new Date(PLAN_YEAR, 0, 1);
+    const yyyy = target.getFullYear();
+    const mm = String(target.getMonth() + 1).padStart(2, '0');
+    const dd = String(target.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   });
+
+  // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (!loading && bibleData) {
       const timer = setTimeout(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-        if (document.documentElement) document.documentElement.scrollTop = 0;
-        if (document.body) document.body.scrollTop = 0;
+        mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -232,18 +313,11 @@ const App: React.FC = () => {
       try {
         const parsed = JSON.parse(saved);
         const validIds = FALLBACK_VERSIONS.map(v => v.id);
-        if (parsed.primaryVersion && !validIds.includes(parsed.primaryVersion)) {
-          parsed.primaryVersion = 'unv';
-        }
-        if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) {
-          parsed.secondaryVersion = null;
-        }
-        // Migrate legacy schedule JSON keys (MM-DD → YYYY-MM-DD)
+        if (parsed.primaryVersion && !validIds.includes(parsed.primaryVersion)) parsed.primaryVersion = 'unv';
+        if (parsed.secondaryVersion && !validIds.includes(parsed.secondaryVersion)) parsed.secondaryVersion = null;
         if (parsed.dailyScheduleJson) {
           parsed.dailyScheduleJson = migrateScheduleJson(parsed.dailyScheduleJson, 2026);
         }
-
-        // Migrate legacy completed task IDs (v1/v2 → v3 YYYY-MM-DD prefix)
         if ((parsed.completedTasks ?? []).some((id: string) => !/^\d{4}-\d{2}-\d{2}:/.test(id))) {
           let schedule: Record<string, string>;
           try {
@@ -253,39 +327,33 @@ const App: React.FC = () => {
           }
           parsed.completedTasks = migrateCompletedTasks(parsed.completedTasks ?? [], schedule);
         }
-
         setSettings(prev => {
-          const newSettings = { ...prev, ...parsed };
-          // Persist the migrated data back to localStorage immediately so it only runs once.
-          localStorage.setItem('bible_settings', JSON.stringify(newSettings));
-          return newSettings;
+          const next = { ...prev, ...parsed };
+          localStorage.setItem('bible_settings', JSON.stringify(next));
+          return next;
         });
       } catch {
-        console.error("Failed to load settings");
+        console.error('Failed to load settings');
       }
     }
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (monthPickerRef.current && !monthPickerRef.current.contains(event.target as Node)) {
-        setIsMonthPickerOpen(false);
-      }
-      if (typeSettingsRef.current && !typeSettingsRef.current.contains(event.target as Node)) {
-        setIsTypeSettingsOpen(false);
+    if (!settingsOpen) return;
+    const close = (e: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
       }
     };
-    if (isMonthPickerOpen || isTypeSettingsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMonthPickerOpen, isTypeSettingsOpen]);
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [settingsOpen]);
 
-  const saveSettings = useCallback((newSettings: AppSettings) => {
-    setSettings(newSettings);
-    localStorage.setItem('bible_settings', JSON.stringify(newSettings));
+  // ── Callbacks ──────────────────────────────────────────────────────────────
+
+  const saveSettings = useCallback((s: AppSettings) => {
+    setSettings(s);
+    localStorage.setItem('bible_settings', JSON.stringify(s));
   }, []);
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
@@ -294,7 +362,12 @@ const App: React.FC = () => {
     return updated;
   };
 
+  const showToast = (message: string, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
 
+  // ── Memos ──────────────────────────────────────────────────────────────────
 
   const parsedSchedule = useMemo(() => {
     if (settings.scheduleMode === 'static') {
@@ -307,35 +380,25 @@ const App: React.FC = () => {
     if (!bibleData) return { inPlan: false, nextItem: null, prevItem: null, currentItemId: null };
     const currentBaseId = `${bibleData.bookCode}${bibleData.chapter}`;
     const currentFullId = buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
-
-    // Multi-year support: search using the full date-prefixed ID
-    // Check currentScheduleItemId first, then try matching with selectedDate prefix for manual searches
     const todayFullId = `${selectedDate}:${currentFullId}`;
     const todayBaseId = `${selectedDate}:${currentBaseId}`;
-
     const idToSearch = currentScheduleItemId || todayFullId;
-    let currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === idToSearch);
 
-    if (currentIndex === -1 && !currentScheduleItemId) {
-      currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === todayBaseId);
+    let idx = (parsedSchedule as ScheduleItem[]).findIndex(item => item.id === idToSearch);
+    if (idx === -1 && !currentScheduleItemId) {
+      idx = (parsedSchedule as ScheduleItem[]).findIndex(item => item.id === todayBaseId);
+    }
+    if (idx === -1 && !currentScheduleItemId) {
+      idx = (parsedSchedule as ScheduleItem[]).findIndex(item => item.id === currentFullId);
+      if (idx === -1) idx = (parsedSchedule as ScheduleItem[]).findIndex(item => item.id === currentBaseId);
     }
 
-    // Backward-compat fallback: if not found with prefix, search using bare IDs
-    // (Crucial for Static Mode and manual searches without date context)
-    if (currentIndex === -1 && !currentScheduleItemId) {
-      currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === currentFullId);
-      if (currentIndex === -1) {
-        currentIndex = (parsedSchedule as ScheduleItem[]).findIndex((item) => item.id === currentBaseId);
-      }
-    }
-
-    const currentItem = currentIndex !== -1 ? (parsedSchedule as ScheduleItem[])[currentIndex] : null;
-
+    const current = idx !== -1 ? (parsedSchedule as ScheduleItem[])[idx] : null;
     return {
-      inPlan: currentIndex !== -1,
-      nextItem: currentIndex !== -1 && currentIndex < (parsedSchedule as any[]).length - 1 ? (parsedSchedule as any[])[currentIndex + 1] : null,
-      prevItem: currentIndex > 0 ? (parsedSchedule as any[])[currentIndex - 1] : null,
-      currentItemId: currentItem ? currentItem.id : null
+      inPlan: idx !== -1,
+      nextItem: idx !== -1 && idx < parsedSchedule.length - 1 ? parsedSchedule[idx + 1] : null,
+      prevItem: idx > 0 ? parsedSchedule[idx - 1] : null,
+      currentItemId: current ? current.id : null,
     };
   }, [bibleData, parsedSchedule, currentScheduleItemId, selectedDate]);
 
@@ -345,17 +408,80 @@ const App: React.FC = () => {
       const schedule = JSON.parse(settings.dailyScheduleJson);
       const yearPrefix = String(PLAN_YEAR) + '-';
       const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
-      const currentIdx = dates.indexOf(selectedDate);
-      if (currentIdx === -1) return null;
-      for (let i = currentIdx + 1; i < dates.length; i++) {
-        if (schedule[dates[i]] && schedule[dates[i]].trim()) return dates[i];
+      const idx = dates.indexOf(selectedDate);
+      if (idx === -1) return null;
+      for (let i = idx + 1; i < dates.length; i++) {
+        if (schedule[dates[i]]?.trim()) return dates[i];
       }
     } catch { /* ignore */ }
     return null;
   }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
 
+  const calendarDays = useMemo(() => {
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const days: (null | { day: number; dateKey: string; hasPlan: boolean; isFullyCompleted: boolean; progress: number })[] = [];
+    for (let i = 0; i < firstDay.getDay(); i++) days.push(null);
+    for (let i = 1; i <= lastDay.getDate(); i++) {
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(i).padStart(2, '0');
+      const dateKey = `${year}-${mm}-${dd}`;
+      const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
+      const hasPlan = plan.length > 0;
+      const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
+      days.push({
+        day: i, dateKey, hasPlan,
+        isFullyCompleted: hasPlan && completedCount === plan.length,
+        progress: hasPlan ? completedCount / plan.length : 0,
+      });
+    }
+    return days;
+  }, [currentViewDate, settings.dailyScheduleJson, settings.completedTasks]);
+
+  const yearProgress = useMemo(() => {
+    if (settings.scheduleMode !== 'daily') return null;
+    try {
+      const schedule = JSON.parse(settings.dailyScheduleJson);
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      let total = 0, completed = 0;
+      for (const dateKey of Object.keys(schedule).filter(k => k.startsWith(yearPrefix))) {
+        const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
+        total += plan.length;
+        completed += plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
+      }
+      return { total, completed };
+    } catch {
+      return null;
+    }
+  }, [settings.scheduleMode, settings.dailyScheduleJson, settings.completedTasks]);
+
+  const filteredVersions = useMemo(() => {
+    const s = versionSearch.toLowerCase().trim();
+    return s ? availableVersions.filter(v => v.id.toLowerCase().includes(s) || v.name.toLowerCase().includes(s)) : availableVersions;
+  }, [availableVersions, versionSearch]);
+
+  const filteredVerses = useMemo(() => {
+    if (!bibleData) return [];
+    if (!bibleData.startVerse) return bibleData.verses;
+    const start = bibleData.startVerse;
+    const end = bibleData.endVerse || start;
+    return bibleData.verses.filter(v => v.verse >= start && v.verse <= end);
+  }, [bibleData]);
+
+  const filteredParallel = useMemo(() => {
+    if (!bibleData || !parallelData) return null;
+    if (!bibleData.startVerse) return parallelData;
+    const start = bibleData.startVerse;
+    const end = bibleData.endVerse || start;
+    return parallelData.filter(v => v.verse >= start && v.verse <= end);
+  }, [bibleData, parallelData]);
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
   const fetchBible = async (
-    refInfo: { book: string, chapter: number, startVerse?: number, endVerse?: number, label?: string, scheduleItemId?: string } | null = null,
+    refInfo: { book: string; chapter: number; startVerse?: number; endVerse?: number; label?: string; scheduleItemId?: string } | null = null,
     customPrimary?: string,
     customSecondary?: string | null
   ) => {
@@ -373,45 +499,38 @@ const App: React.FC = () => {
         search = { book: bibleData.bookCode, chapter: bibleData.chapter };
       }
     }
-    if (!search || !search.book || !search.chapter) return;
+    if (!search?.book || !search.chapter) return;
+
     const pVer = customPrimary || settings.primaryVersion;
     const sVer = customSecondary !== undefined ? customSecondary : settings.secondaryVersion;
     setLoading(true);
     setError('');
     const bookZh = Object.keys(BIBLE_BOOKS).find(key => BIBLE_BOOKS[key] === search?.book) || search.book;
     const qstr = `${search.book}${search.chapter}`;
+
     try {
       const fetchVersion = async (ver: string) => {
         const res = await fetch(`https://bible.fhl.net/json/qsb.php?qstr=${encodeURIComponent(qstr)}&version=${ver}&strong=0&gb=0`);
         const buffer = await res.arrayBuffer();
-        const decoder = new TextDecoder("big5");
-        const text = decoder.decode(buffer);
+        const text = new TextDecoder('big5').decode(buffer);
         const data = JSON.parse(text);
-        if (data.status !== 'success') { throw new Error(`API Error for ${ver}: ${data.status}`); }
+        if (data.status !== 'success') throw new Error(`API Error: ${data.status}`);
         return data.record.map((r: any) => ({ verse: r.sec, text: r.bible_text }));
       };
       const [data1, data2] = await Promise.all([
         fetchVersion(pVer),
-        sVer ? fetchVersion(sVer) : Promise.resolve(null)
+        sVer ? fetchVersion(sVer) : Promise.resolve(null),
       ]);
       const reference = search.label || (search.startVerse
         ? `${bookZh} ${search.chapter}:${search.startVerse}${search.endVerse && search.endVerse !== search.startVerse ? '-' + search.endVerse : ''}`
         : `${bookZh} ${search.chapter}`);
-      setBibleData({
-        reference,
-        bookCode: search.book,
-        chapter: search.chapter,
-        startVerse: search.startVerse,
-        endVerse: search.endVerse,
-        verses: data1
-      });
+      setBibleData({ reference, bookCode: search.book, chapter: search.chapter, startVerse: search.startVerse, endVerse: search.endVerse, verses: data1 });
       setParallelData(data2);
       setInput(reference);
-      // Track which schedule item (with date-prefixed ID) is being read
       setCurrentScheduleItemId(refInfo?.scheduleItemId ?? null);
     } catch (err: any) {
       console.error(err);
-      setError("讀取失敗，請檢查網路或稍後再試。");
+      setError('讀取失敗，請檢查網路或稍後再試。');
     } finally {
       setLoading(false);
     }
@@ -419,27 +538,25 @@ const App: React.FC = () => {
 
   const toggleTask = (id: string) => {
     const isCompleted = settings.completedTasks.includes(id);
-    const newTasks = isCompleted ? settings.completedTasks.filter(t => t !== id) : [...settings.completedTasks, id];
-    updateSetting('completedTasks', newTasks);
+    updateSetting('completedTasks', isCompleted
+      ? settings.completedTasks.filter(t => t !== id)
+      : [...settings.completedTasks, id]
+    );
   };
 
   const markCurrentAsRead = () => {
     if (!bibleData) return;
-    // Prefer the ID matched by navigation logic (which handles prefixes/bare fallbacks)
-    // to ensure immediate UI feedback in the sidebar/calendar.
-    const idToMark = navStatus.currentItemId || currentScheduleItemId ||
+    const id = navStatus.currentItemId || currentScheduleItemId ||
       buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
-
-    if (!settings.completedTasks.includes(idToMark)) {
-      toggleTask(idToMark);
+    if (!settings.completedTasks.includes(id)) {
+      toggleTask(id);
       showToast(`已完成：${bibleData.reference}！`);
     }
   };
 
   const handleExportProgress = () => {
-    const data = JSON.stringify(settings.completedTasks);
-    navigator.clipboard.writeText(data).then(() => {
-      showToast("進度代碼已複製到剪貼簿");
+    navigator.clipboard.writeText(JSON.stringify(settings.completedTasks)).then(() => {
+      showToast('進度代碼已複製到剪貼簿');
     });
   };
 
@@ -448,81 +565,31 @@ const App: React.FC = () => {
     try {
       const parsed = JSON.parse(migrationInput);
       if (Array.isArray(parsed)) {
-        // Merge with unique values
         const merged = Array.from(new Set([...settings.completedTasks, ...parsed]));
         updateSetting('completedTasks', merged);
         showToast(`匯入成功！已新增 ${merged.length - settings.completedTasks.length} 條紀錄。`);
         setMigrationInput('');
+        setShowImportField(false);
       } else {
-        showToast("格式錯誤，請確認貼上的內容是否正確。", "error");
+        showToast('格式錯誤，請確認貼上的內容。', 'error');
       }
     } catch {
-      showToast("解析失敗，請確認代碼完整性。", "error");
+      showToast('解析失敗，請確認代碼完整性。', 'error');
     }
   };
-
-  const showToast = (message: string, type: string = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
-  };
-
-  const calendarDays = useMemo(() => {
-    const year = currentViewDate.getFullYear();
-    const month = currentViewDate.getMonth();
-    const firstDayOfMonth = new Date(year, month, 1);
-    const lastDayOfMonth = new Date(year, month + 1, 0);
-    const daysInMonth = lastDayOfMonth.getDate();
-    const startingDay = firstDayOfMonth.getDay();
-    const days = [];
-    for (let i = 0; i < startingDay; i++) days.push(null);
-    for (let i = 1; i <= daysInMonth; i++) {
-      const yyyy = year;
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(i).padStart(2, '0');
-      const dateKey = `${yyyy}-${mm}-${dd}`;
-      const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
-      const hasPlan = plan.length > 0;
-      const completedCount = plan.filter((p: ScheduleItem) => settings.completedTasks.includes(p.id)).length;
-      const isFullyCompleted = hasPlan && completedCount === plan.length;
-      const progress = hasPlan ? (completedCount / plan.length) : 0;
-      days.push({ day: i, dateKey, hasPlan, isFullyCompleted, progress });
-    }
-    return days;
-  }, [currentViewDate, settings.dailyScheduleJson, settings.completedTasks]);
-
-  const themes: Record<Theme, string> = {
-    light: "bg-white text-slate-900 border-slate-200 shadow-sm",
-    sepia: "bg-[#fcf5e5] text-[#5b4636] border-[#eaddc0] shadow-sm",
-    dark: "bg-[#1e1e1e] text-[#d1d1d1] border-[#333] shadow-none"
-  };
-
-  const bodyBg: Record<Theme, string> = {
-    light: "bg-slate-50",
-    sepia: "bg-[#f4ecd8]",
-    dark: "bg-[#121212]"
-  };
-
-  const filteredVersions = useMemo(() => {
-    const s = versionSearch.toLowerCase().trim();
-    return s ? availableVersions.filter(v => v.id.toLowerCase().includes(s) || v.name.toLowerCase().includes(s)) : availableVersions;
-  }, [availableVersions, versionSearch]);
 
   const handleDayClick = (dateKey: string) => {
     setSelectedDate(dateKey);
     const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
     if (plan.length > 0) {
-      const firstUncompleted = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id));
-      const targetItem = firstUncompleted || plan[0];
-      fetchBible({ book: targetItem.book, chapter: targetItem.chapter, startVerse: targetItem.startVerse, endVerse: targetItem.endVerse, label: targetItem.label, scheduleItemId: targetItem.id });
+      const target = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id)) || plan[0];
+      fetchBible({ book: target.book, chapter: target.chapter, startVerse: target.startVerse, endVerse: target.endVerse, label: target.label, scheduleItemId: target.id });
     }
   };
 
   const goToTodayInPlan = () => {
     const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const dateKey = `${yyyy}-${mm}-${dd}`;
+    const dateKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     setCurrentViewDate(today);
     handleDayClick(dateKey);
   };
@@ -531,9 +598,7 @@ const App: React.FC = () => {
     try {
       const schedule = JSON.parse(settings.dailyScheduleJson);
       const yearPrefix = String(PLAN_YEAR) + '-';
-      const dates = Object.keys(schedule)
-        .filter(k => k.startsWith(yearPrefix))
-        .sort();
+      const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
       for (const dateKey of dates) {
         const plan = getDayPlan(dateKey, settings.dailyScheduleJson);
         if (plan.some((item: ScheduleItem) => !settings.completedTasks.includes(item.id))) {
@@ -554,419 +619,1019 @@ const App: React.FC = () => {
     handleDayClick(nextDayWithPlan);
   };
 
-  const handleMonthSelect = (m: number) => {
-    setCurrentViewDate(new Date(currentViewDate.getFullYear(), m, 1));
-    setIsMonthPickerOpen(false);
-  };
+  // ── Derived ────────────────────────────────────────────────────────────────
 
-  const handleYearSelect = (y: number) => {
-    setCurrentViewDate(new Date(y, currentViewDate.getMonth(), 1));
-  };
-
-  const verseGapClass = useMemo(() => {
-    // Dynamic vertical gap based on spacing selection (aligned to 1.2, 1.4, 1.6, 1.8, 2.0 steps)
-    if (settings.lineHeight <= 1.25) return 'gap-y-4';
-    if (settings.lineHeight <= 1.45) return 'gap-y-6';
-    if (settings.lineHeight <= 1.65) return 'gap-y-8';
-    if (settings.lineHeight <= 1.85) return 'gap-y-10';
-    return 'gap-y-12';
-  }, [settings.lineHeight]);
-
-  const filteredVerses = useMemo(() => {
-    if (!bibleData) return [];
-    if (!bibleData.startVerse) return bibleData.verses;
-    const start = bibleData.startVerse;
-    const end = bibleData.endVerse || start;
-    return bibleData.verses.filter(v => v.verse >= start && v.verse <= end);
-  }, [bibleData]);
-
-  const filteredParallel = useMemo(() => {
-    if (!bibleData || !parallelData) return null;
-    if (!bibleData.startVerse) return parallelData;
-    const start = bibleData.startVerse;
-    const end = bibleData.endVerse || start;
-    return parallelData.filter(v => v.verse >= start && v.verse <= end);
-  }, [bibleData, parallelData]);
-
-  const handleScrollToTop = () => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-    if (document.documentElement) document.documentElement.scrollTop = 0;
-    if (document.body) document.body.scrollTop = 0;
-  };
-
+  const theme = T[settings.theme];
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v1.0.0-dev';
 
+  const todayStr = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  })();
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-500 font-sans ${bodyBg[settings.theme]}`}>
+    <div style={{
+      height: '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      background: theme.bg,
+      backgroundImage: settings.theme === 'sepia' ? `url("${PAPER_NOISE}")` : 'none',
+      color: theme.ink,
+      fontFamily: F.sans,
+      overflow: 'hidden',
+    }}>
+      {/* Toast */}
       {toast.show && (
-        <div className={`fixed top-24 left-1/2 -translate-x-1/2 z-[60] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${toast.type === 'success' ? 'bg-indigo-600 text-white' : 'bg-rose-600 text-white'}`}>
-          {toast.type === 'success' ? <PartyPopper size={20} /> : <AlertCircle size={20} />}
-          <span className="font-bold">{toast.message}</span>
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 200, padding: '10px 18px', borderRadius: 999,
+          background: toast.type === 'success' ? A.base : '#e11d48',
+          color: '#fff', display: 'flex', alignItems: 'center', gap: 8,
+          fontFamily: F.label, fontSize: 13, fontWeight: 600,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.22)',
+          whiteSpace: 'nowrap',
+        }}>
+          {toast.type === 'success' ? <PartyPopper size={15} /> : <AlertCircle size={15} />}
+          {toast.message}
         </div>
       )}
 
-      <nav className={`sticky top-0 z-40 border-b backdrop-blur-md px-6 py-4 flex flex-wrap items-center justify-between gap-4 transition-colors duration-500 ${themes[settings.theme]}`}>
-        <button
-          onClick={() => window.location.reload()}
-          className="flex items-center gap-3 hover:opacity-70 transition-opacity active:scale-95"
-          title="重新整理"
-        >
-          <BookOpen className="text-indigo-600" size={24} />
-          <h1 className="text-lg font-bold text-indigo-600 hidden sm:block tracking-tight">2026 每日讀經</h1>
-        </button>
-        <div className="flex items-center gap-2 flex-1 max-md:max-w-none max-w-md">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              className={`w-full pl-4 pr-10 py-2 rounded-xl border-2 outline-none focus:border-indigo-500 transition-all ${settings.theme === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-slate-100 border-transparent'}`}
-              placeholder="搜尋書卷... (如: 詩 23)"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && fetchBible()}
-            />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 opacity-30" size={18} />
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-black/5 p-1 rounded-xl">
-            <button onClick={() => setShowVersionPicker({ active: true, target: 'primary' })} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${settings.theme === 'dark' ? 'hover:bg-white/10 text-white' : 'bg-white shadow-sm'}`}>{settings.primaryVersion}</button>
-            <button onClick={() => settings.secondaryVersion ? updateSetting('secondaryVersion', null) : setShowVersionPicker({ active: true, target: 'secondary' })} className={`ml-1 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${settings.secondaryVersion ? 'bg-indigo-600 text-white' : 'opacity-40 hover:opacity-100'}`}>{settings.secondaryVersion || "+ 譯本對照"}</button>
-          </div>
-          <button onClick={() => updateSetting('theme', settings.theme === 'dark' ? 'light' : settings.theme === 'light' ? 'sepia' : 'dark')} className="p-2 hover:bg-black/5 rounded-full transition-colors">
-            {settings.theme === 'light' ? <Sun size={20} /> : settings.theme === 'sepia' ? <Coffee size={20} /> : <Moon size={20} />}
-          </button>
-        </div>
-      </nav>
-
-      <div className="flex-1 w-full max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="lg:col-span-1 space-y-6">
-          <section className={`p-5 rounded-3xl border-2 overflow-visible transition-all duration-500 ${themes[settings.theme]}`}>
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={() => setIsScheduleExpanded(!isScheduleExpanded)} className="font-black text-sm uppercase tracking-widest flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <ChevronDown size={18} className={`text-indigo-600 transition-transform duration-300 ${isScheduleExpanded ? '' : '-rotate-90'}`} />
-                {settings.scheduleMode === 'daily' ? '每日計劃' : '讀經清單'}
-              </button>
-              <div className="flex gap-1">
-                <button onClick={goToTodayInPlan} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="回到今天 (2026)"><Target size={16} /></button>
-                {settings.scheduleMode === 'daily' && (
-                  <button onClick={goToFirstUnfinished} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="找到第一個未完成的日子"><BookMarked size={16} /></button>
-                )}
-                <button onClick={() => setIsEditingSchedule(!isEditingSchedule)} className={`p-1.5 rounded-lg transition-colors ${isEditingSchedule ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:bg-black/5'}`} title="編輯計劃"><Settings size={16} /></button>
-              </div>
-            </div>
-            {isScheduleExpanded && (
-              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                {settings.scheduleMode === 'daily' && !isEditingSchedule && (
-                  <div className="mb-6">
-                    <div className="relative flex items-center justify-between mb-4 px-1">
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronLeft size={16} /></button>
-                      <button onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)} className="flex items-center gap-1.5 font-bold text-sm tracking-tight px-3 py-1.5 hover:bg-black/5 rounded-xl transition-all active:scale-95">
-                        {currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月
-                        <ChevronDown size={14} className={`transition-transform duration-200 ${isMonthPickerOpen ? 'rotate-180' : ''}`} />
-                      </button>
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} className="p-1 hover:bg-black/5 rounded-full transition-colors"><ChevronRight size={16} /></button>
-                      {isMonthPickerOpen && (
-                        <div ref={monthPickerRef} className={`absolute top-full left-1/2 -translate-x-1/2 z-50 mt-2 w-64 p-4 rounded-2xl shadow-2xl border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}>
-                          <div className="flex items-center justify-between mb-4 border-b pb-2">
-                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() - 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronLeft size={14} /></button>
-                            <span className="font-black text-sm">{currentViewDate.getFullYear()}</span>
-                            <button onClick={() => handleYearSelect(currentViewDate.getFullYear() + 1)} className="p-1 hover:bg-black/5 rounded-lg"><ChevronRight size={14} /></button>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2">
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(m => (
-                              <button key={m} onClick={() => handleMonthSelect(m)} className={`py-2 rounded-xl text-xs font-bold transition-all ${currentViewDate.getMonth() === m ? 'bg-indigo-600 text-white' : 'hover:bg-black/5'}`}>{m + 1}月</button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-[10px] uppercase font-black opacity-30 text-center mb-2">
-                      {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d}>{d}</div>)}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1.5">
-                      {calendarDays.map((d, idx) => {
-                        if (!d) return <div key={`empty-${idx}`} className="aspect-square"></div>;
-                        const isSelected = d.dateKey === selectedDate;
-                        const today = new Date();
-                        const isActuallyToday = d.dateKey === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                        return (
-                          <button key={d.dateKey} onClick={() => handleDayClick(d.dateKey)} className={`relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-bold transition-all group ${isSelected ? 'bg-indigo-600 text-white shadow-md z-10' : 'hover:bg-black/5'} ${isActuallyToday && !isSelected ? 'ring-2 ring-indigo-500/30' : ''} ${!d.hasPlan && !isSelected ? 'opacity-20' : ''}`}>
-                            {d.day}
-                            {d.hasPlan && <div className={`absolute bottom-1.5 h-1 w-1 rounded-full transition-colors ${isSelected ? 'bg-white' : d.isFullyCompleted ? 'bg-green-500' : d.progress > 0 ? 'bg-amber-500' : 'bg-slate-300'}`} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-                {isEditingSchedule ? (
-                  <div className="space-y-4 animate-in zoom-in-95 duration-200">
-                    <div className="flex gap-2 p-1 bg-black/5 rounded-xl">
-                      <button onClick={() => updateSetting('scheduleMode', 'static')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'static' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>靜態</button>
-                      <button onClick={() => updateSetting('scheduleMode', 'daily')} className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${settings.scheduleMode === 'daily' ? 'bg-white shadow-sm text-indigo-600' : 'opacity-40 hover:opacity-100'}`}>每日 (JSON)</button>
-                    </div>
-                    {settings.scheduleMode === 'static' ? (
-                      <textarea className="w-full h-40 text-sm p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.scheduleText} onChange={(e) => setSettings({ ...settings, scheduleText: e.target.value })} placeholder="格式：馬太 1-3" />
-                    ) : (
-                      <textarea className="w-full h-40 text-[10px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono resize-none" value={settings.dailyScheduleJson} onChange={(e) => setSettings({ ...settings, dailyScheduleJson: e.target.value })} placeholder='{"01-01": "太 1"}' />
-                    )}
-
-                    <div className="pt-4 border-t border-black/5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase opacity-50">進度遷移與備份</span>
-                        <span className="text-[10px] font-bold text-indigo-600">已完成 {settings.completedTasks.length} 章</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button onClick={handleExportProgress} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-50 text-indigo-600 text-[10px] font-black hover:bg-indigo-100 transition-colors">
-                          <Download size={14} /> 匯出進度
-                        </button>
-                        <button onClick={handleImportProgress} className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-800 text-white text-[10px] font-black hover:bg-black transition-colors">
-                          <Upload size={14} /> 匯入進度
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        className="w-full text-[9px] p-3 rounded-xl border-2 bg-black/5 outline-none focus:border-indigo-500 font-mono"
-                        placeholder="在此貼上匯出的進度代碼..."
-                        value={migrationInput}
-                        onChange={(e) => setMigrationInput(e.target.value)}
-                      />
-                    </div>
-
-                    <button onClick={() => { setIsEditingSchedule(false); saveSettings(settings); showToast("計劃與進度已儲存"); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"><Save size={18} /> 儲存並關閉</button>
-                  </div>
-                ) : (
-                  <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                    <div className="mb-2 px-1">
-                      <span className="text-[10px] font-black uppercase text-indigo-600/50">{settings.scheduleMode === 'daily' ? `${selectedDate} 的章節` : '所有章節'}</span>
-                    </div>
-                    {parsedSchedule.length > 0 ? parsedSchedule.map((item: ScheduleItem) => (
-                      <button key={item.id} className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all text-left ${settings.completedTasks.includes(item.id) ? 'bg-green-500/10 border-green-500/20' : 'bg-black/5 border-transparent hover:border-indigo-300'}`} onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id })}>
-                        <span className={`text-sm font-bold truncate ${settings.completedTasks.includes(item.id) ? 'line-through opacity-30 italic' : ''}`}>{item.label}</span>
-                        <div onClick={(e) => { e.stopPropagation(); toggleTask(item.id); }} className={`p-1 ${settings.completedTasks.includes(item.id) ? 'text-green-500' : 'text-slate-300 hover:text-indigo-400'} transition-colors cursor-pointer`}>
-                          <CheckCircle2 size={18} fill={settings.completedTasks.includes(item.id) ? "currentColor" : "none"} />
-                        </div>
-                      </button>
-                    )) : (
-                      <div className="text-center py-10 opacity-30 border-2 border-dashed rounded-2xl flex flex-col items-center">
-                        <FileText size={32} className="mb-2" />
-                        <p className="text-[10px] font-bold uppercase">本日無指定內容</p>
-                      </div>
-                    )}
-                  </div>
-                )}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* ─── LEFT RAIL ──────────────────────────────────────────────── */}
+        <aside style={{
+          width: railOpen ? 272 : 52,
+          flexShrink: 0,
+          borderRight: `1px solid ${theme.line}`,
+          display: 'flex',
+          flexDirection: 'column',
+          transition: 'width .22s ease',
+          overflow: 'hidden',
+        }}>
+          {/* Rail header */}
+          <div style={{
+            padding: railOpen ? '18px 16px 12px' : '18px 6px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: railOpen ? 'space-between' : 'center',
+            flexShrink: 0,
+          }}>
+            {railOpen && (
+              <div>
+                <div style={{
+                  fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                  letterSpacing: '0.2em', textTransform: 'uppercase',
+                  color: theme.muted, marginBottom: 3,
+                }}>2026 · 每日讀經</div>
+                <div style={{
+                  fontFamily: F.serif, fontSize: 18, fontWeight: 600,
+                  color: theme.ink, letterSpacing: '-0.01em',
+                }}>
+                  {currentViewDate.toLocaleDateString('zh-Hant-TW', { month: 'long' })}
+                </div>
               </div>
             )}
-          </section>
-        </aside>
+            <button
+              onClick={() => setRailOpen(r => !r)}
+              style={{ ...iconBtn(theme), color: theme.muted }}
+              title={railOpen ? '收合' : '展開'}
+            >
+              {railOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+            </button>
+          </div>
 
-        <main className="lg:col-span-3">
-          {loading ? (
-            <LoadingView theme={settings.theme} />
-          ) : error ? (
-            <div className="bg-rose-500/10 border-2 border-rose-500/20 text-rose-500 p-8 rounded-[2.5rem] flex gap-4 animate-in shake duration-500">
-              <AlertCircle size={24} /><p className="font-bold">{error}</p>
+          {/* Collapsed icon stack */}
+          {!railOpen && (
+            <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {[
+                { icon: <CalendarDays size={17} />, title: '日曆', action: () => setRailOpen(true) },
+                { icon: <List size={17} />, title: '今日計劃', action: () => setRailOpen(true) },
+                { icon: <Target size={17} />, title: '回到今天', action: goToTodayInPlan },
+                { icon: <BookMarked size={17} />, title: '跳到第一個未讀', action: goToFirstUnfinished },
+              ].map((b, i) => (
+                <button key={i} onClick={b.action} title={b.title} style={{
+                  appearance: 'none', border: 'none', cursor: 'pointer',
+                  background: 'transparent', color: theme.muted,
+                  padding: 10, borderRadius: 8,
+                  display: 'flex', justifyContent: 'center',
+                }}>
+                  {b.icon}
+                </button>
+              ))}
             </div>
-          ) : bibleData ? (
-            <div className={`rounded-[2.5rem] border-2 overflow-hidden shadow-2xl shadow-indigo-100/10 transition-colors duration-500 animate-in fade-in duration-700 ${themes[settings.theme]}`}>
-              <div className="px-8 md:px-12 py-10 border-b flex flex-col md:flex-row md:items-center justify-between bg-black/[0.01] gap-6">
-                <div>
-                  <h2 className="text-4xl font-black tracking-tight">{bibleData.reference}</h2>
-                  <div className="flex gap-2 mt-4">
-                    <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-indigo-600 text-white uppercase tracking-wider">{settings.primaryVersion}</span>
-                    {settings.secondaryVersion && <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-600 text-white uppercase tracking-wider">{settings.secondaryVersion}</span>}
+          )}
+
+          {/* Expanded rail */}
+          {railOpen && (
+            <div style={{
+              flex: 1, overflowY: 'auto',
+              padding: '0 12px 20px',
+              display: 'flex', flexDirection: 'column', gap: 16,
+            }}>
+              {/* CALENDAR */}
+              <section>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '4px 4px', marginBottom: 6,
+                }}>
+                  <span style={{
+                    fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                    letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted,
+                  }}>日曆</span>
+                  <div style={{ display: 'flex', gap: 2 }}>
+                    <button
+                      onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))}
+                      style={iconBtn(theme)} title="上月"
+                    ><ChevronLeft size={12} /></button>
+                    <button
+                      onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))}
+                      style={iconBtn(theme)} title="下月"
+                    ><ChevronRight size={12} /></button>
                   </div>
                 </div>
-                <div className="relative flex items-center gap-3">
-                  <button onClick={() => setIsTypeSettingsOpen(!isTypeSettingsOpen)} className={`p-4 rounded-2xl transition-all flex items-center gap-2 group ${isTypeSettingsOpen ? 'bg-indigo-600 text-white shadow-lg' : 'bg-black/5 hover:bg-black/10'}`} title="閱讀設定">
-                    <Type size={20} />
-                    <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">設定</span>
-                    <ChevronDown size={14} className={`transition-transform duration-200 ${isTypeSettingsOpen ? 'rotate-180' : ''}`} />
+
+                <div style={{
+                  fontFamily: F.label, fontSize: 10, fontWeight: 500,
+                  color: theme.inkSoft, textAlign: 'center', marginBottom: 6,
+                }}>
+                  {currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月
+                </div>
+
+                {/* Week labels */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 1, marginBottom: 3 }}>
+                  {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+                    <div key={d} style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      color: theme.faint, textAlign: 'center', padding: '2px 0',
+                    }}>{d}</div>
+                  ))}
+                </div>
+
+                {/* Days */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+                  {calendarDays.map((d, idx) => {
+                    if (!d) return <div key={`e${idx}`} style={{ aspectRatio: '1', minHeight: 26 }} />;
+                    const isSel = d.dateKey === selectedDate;
+                    const isToday = d.dateKey === todayStr;
+                    return (
+                      <button key={d.dateKey} onClick={() => handleDayClick(d.dateKey)} style={{
+                        appearance: 'none', border: 'none', cursor: 'pointer',
+                        aspectRatio: '1', minHeight: 26,
+                        borderRadius: 5,
+                        background: isSel ? A.base : 'transparent',
+                        color: isSel ? '#fff' : !d.hasPlan ? theme.faint : theme.ink,
+                        fontFamily: F.label, fontSize: 11, fontWeight: 500,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', position: 'relative',
+                        boxShadow: isToday && !isSel ? `inset 0 0 0 1.5px ${A.base}` : 'none',
+                        opacity: !d.hasPlan && !isSel ? 0.28 : 1,
+                        transition: 'all .1s ease',
+                      }}>
+                        {d.day}
+                        {d.hasPlan && (
+                          <span style={{
+                            position: 'absolute', bottom: 2,
+                            width: 3, height: 3, borderRadius: '50%',
+                            background: isSel ? 'rgba(255,255,255,0.7)' :
+                              d.isFullyCompleted ? theme.success :
+                              d.progress > 0 ? A.soft : theme.faint,
+                          }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <div style={{ height: 1, background: theme.line, margin: '0 4px' }} />
+
+              {/* TODAY'S PLAN */}
+              <section>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '2px 4px', marginBottom: 8,
+                }}>
+                  <button
+                    onClick={() => setIsScheduleExpanded(e => !e)}
+                    style={{
+                      flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+                      background: 'transparent', padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}
+                  >
+                    <span style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted,
+                    }}>
+                      {selectedDate.slice(5).replace('-', '月')}日
+                    </span>
+                    {isScheduleExpanded
+                      ? <ChevronUp size={12} style={{ color: theme.faint }} />
+                      : <ChevronDown size={12} style={{ color: theme.faint }} />}
                   </button>
+                  {/* Quiet catch-up — jumps to first unread day without any badge or nudge */}
+                  <button
+                    onClick={goToFirstUnfinished}
+                    title="跳到本年第一個未讀的一天"
+                    style={{ ...iconBtn(theme), width: 20, height: 20 }}
+                  ><BookMarked size={11} /></button>
+                  <button
+                    onClick={goToTodayInPlan}
+                    title="回到今天"
+                    style={{ ...iconBtn(theme), width: 20, height: 20 }}
+                  ><Target size={11} /></button>
+                </div>
 
-                  {isTypeSettingsOpen && (
-                    <div ref={typeSettingsRef} className={`absolute top-full right-0 z-[55] mt-3 w-72 p-6 rounded-[2.5rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] border-2 animate-in fade-in zoom-in-95 duration-200 ${themes[settings.theme]}`}>
-                      <div className="space-y-8">
-                        <div>
-                          <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">字體大小: <span className="text-indigo-600">{settings.fontSize}px</span></label>
-                          <div className="flex items-center gap-4">
-                            <span className="text-xs opacity-40">A</span>
-                            <input
-                              type="range" min="12" max="36" step="1"
-                              className="flex-1 accent-indigo-600 cursor-pointer"
-                              value={settings.fontSize}
-                              onChange={(e) => updateSetting('fontSize', parseInt(e.target.value))}
-                            />
-                            <span className="text-xl opacity-40">A</span>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] font-black uppercase opacity-40 mb-4 block">行間距離</label>
-                          <div className="grid grid-cols-5 gap-1 p-1 bg-black/5 rounded-2xl">
-                            {[1.2, 1.4, 1.6, 1.8, 2.0].map(lh => (
-                              <button
-                                key={lh}
-                                onClick={() => updateSetting('lineHeight', lh)}
-                                className={`py-2 rounded-xl text-[10px] font-black transition-all ${settings.lineHeight === lh ? 'bg-indigo-600 text-white shadow-sm scale-105' : 'hover:bg-black/5 opacity-50 hover:opacity-100'}`}
-                              >
-                                {lh}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex justify-between mt-2 px-1">
-                            <span className="text-[9px] font-bold opacity-30">極緊</span>
-                            <span className="text-[9px] font-bold opacity-30">適中</span>
-                            <span className="text-[9px] font-bold opacity-30">寬敞</span>
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t border-black/5">
+                {isScheduleExpanded && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {parsedSchedule.length > 0 ? (parsedSchedule as ScheduleItem[]).map(item => {
+                      const done = settings.completedTasks.includes(item.id);
+                      const isCurr = navStatus.currentItemId === item.id
+                        || (bibleData && !navStatus.currentItemId
+                          && bibleData.bookCode === item.book
+                          && bibleData.chapter === item.chapter);
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id })}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 10px', borderRadius: 7,
+                            cursor: 'pointer',
+                            background: isCurr ? A.tint : 'transparent',
+                            borderLeft: isCurr ? `2px solid ${A.base}` : '2px solid transparent',
+                            transition: 'background .1s ease',
+                          }}
+                        >
                           <button
-                            onClick={() => {
-                              updateSetting('fontSize', 18);
-                              updateSetting('lineHeight', 1.6); // Default reset is now 1.6
-                              showToast("已恢復預設樣式");
+                            onClick={e => { e.stopPropagation(); toggleTask(item.id); }}
+                            style={{
+                              appearance: 'none', cursor: 'pointer',
+                              border: `1.5px solid ${done ? theme.success : theme.faint}`,
+                              background: done ? theme.success : 'transparent',
+                              width: 14, height: 14, borderRadius: 3,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              color: '#fff', flexShrink: 0,
+                              transition: 'all .12s ease',
                             }}
-                            className="w-full py-3 text-[10px] font-black uppercase text-center hover:bg-black/5 rounded-xl transition-colors opacity-40 hover:opacity-100"
                           >
-                            恢復預設
+                            {done && <CheckCircle2 size={9} />}
                           </button>
+                          <span style={{
+                            fontFamily: F.sans, fontSize: 13, fontWeight: isCurr ? 600 : 500,
+                            color: done ? theme.muted : theme.ink,
+                            textDecoration: done ? 'line-through' : 'none',
+                            textDecorationColor: theme.faint,
+                            flex: 1,
+                          }}>{item.label}</span>
+                          {isCurr && !done && (
+                            <span style={{
+                              fontFamily: F.label, fontSize: 9, fontWeight: 700,
+                              letterSpacing: '0.08em', color: A.base,
+                            }}>讀</span>
+                          )}
                         </div>
-                      </div>
+                      );
+                    }) : (
+                      <div style={{
+                        padding: '14px 0', textAlign: 'center',
+                        fontFamily: F.label, fontSize: 11, color: theme.faint,
+                        border: `1px dashed ${theme.line}`, borderRadius: 8,
+                      }}>本日無指定內容</div>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              {/* YEAR PROGRESS */}
+              {yearProgress && (
+                <section style={{
+                  padding: 14, borderRadius: 10, background: theme.pill,
+                  marginTop: 'auto',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                    <span style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
+                    }}>年度進度</span>
+                    <span style={{
+                      fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                      color: theme.ink, fontVariantNumeric: 'tabular-nums',
+                    }}>{yearProgress.completed} / {yearProgress.total}</span>
+                  </div>
+                  <div style={{ height: 4, background: theme.line, borderRadius: 999, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${yearProgress.total > 0 ? (yearProgress.completed / yearProgress.total * 100) : 0}%`,
+                      height: '100%', background: A.base, borderRadius: 999,
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
+        </aside>
+
+        {/* ─── MAIN COLUMN ──────────────────────────────────────────────── */}
+        <main style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          overflow: 'hidden', position: 'relative',
+        }}>
+          {/* TOP BAR */}
+          <div style={{
+            height: 58, flexShrink: 0,
+            borderBottom: `1px solid ${theme.line}`,
+            display: 'flex', alignItems: 'center',
+            padding: '0 24px', gap: 10,
+          }}>
+            {/* Search */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px', borderRadius: 8,
+              background: theme.pill,
+              flex: '0 0 auto', width: 260,
+            }}>
+              <Search size={13} style={{ color: theme.muted, flexShrink: 0 }} />
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && fetchBible()}
+                placeholder="搜尋…  如：詩 23"
+                style={{
+                  appearance: 'none', border: 'none', outline: 'none',
+                  background: 'transparent', color: theme.ink,
+                  fontFamily: F.sans, fontSize: 13, flex: 1, minWidth: 0,
+                }}
+              />
+              <span style={{
+                fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                padding: '2px 5px', borderRadius: 3,
+                border: `1px solid ${theme.line}`, color: theme.faint,
+                flexShrink: 0,
+              }}>⌘K</span>
+            </div>
+
+            <div style={{ flex: 1 }} />
+
+            {/* Reading mode toggle */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              padding: 3, borderRadius: 8, background: theme.pill,
+            }}>
+              <button
+                onClick={() => setReadingMode('standard')}
+                title="標準閱讀 · 一節一行"
+                style={modeBtn(readingMode === 'standard', theme)}
+              ><List size={13} /></button>
+              <button
+                onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) updateSetting('secondaryVersion', null); }}
+                title="書頁模式 · 連續排版 · 首字下沉"
+                style={modeBtn(readingMode === 'book', theme)}
+              ><BookOpen size={13} /></button>
+            </div>
+
+            {/* Version chips */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              padding: 3, borderRadius: 8, background: theme.pill,
+            }}>
+              <button
+                onClick={() => setShowVersionPicker({ active: true, target: 'primary' })}
+                style={{
+                  appearance: 'none', border: 'none', cursor: 'pointer',
+                  padding: '5px 10px', borderRadius: 6,
+                  background: theme.surface, color: theme.ink,
+                  fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                  boxShadow: `0 1px 0 ${theme.line}`,
+                }}
+              >{settings.primaryVersion}</button>
+              <button
+                onClick={() => settings.secondaryVersion
+                  ? updateSetting('secondaryVersion', null)
+                  : setShowVersionPicker({ active: true, target: 'secondary' })
+                }
+                disabled={readingMode === 'book'}
+                title={readingMode === 'book' ? '書頁模式下不支援對照' : ''}
+                style={{
+                  appearance: 'none', border: 'none',
+                  cursor: readingMode === 'book' ? 'not-allowed' : 'pointer',
+                  padding: '5px 10px', borderRadius: 6,
+                  background: settings.secondaryVersion ? A.base : 'transparent',
+                  color: settings.secondaryVersion ? '#fff' : theme.muted,
+                  opacity: readingMode === 'book' ? 0.35 : 1,
+                  fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  transition: 'all .12s ease',
+                }}
+              >
+                {settings.secondaryVersion || '+ 對照'}
+              </button>
+            </div>
+
+            {/* Settings gear */}
+            <div ref={settingsRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setSettingsOpen(o => !o)}
+                style={{
+                  appearance: 'none', border: 'none', cursor: 'pointer',
+                  padding: 8, borderRadius: 8,
+                  background: settingsOpen ? theme.pill : 'transparent',
+                  color: theme.inkSoft,
+                  transition: 'background .12s ease',
+                }}
+                title="設定"
+              ><Settings size={16} /></button>
+
+              {settingsOpen && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                  width: 280, padding: 8, borderRadius: 12,
+                  background: theme.surface, border: `1px solid ${theme.lineStrong}`,
+                  boxShadow: '0 16px 48px rgba(0,0,0,0.14)', zIndex: 60,
+                }}>
+                  {/* Theme */}
+                  <div style={{ padding: '6px 8px 10px' }}>
+                    <div style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.16em', textTransform: 'uppercase',
+                      color: theme.muted, marginBottom: 8,
+                    }}>外觀</div>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {([['light', <Sun size={11} />, '亮'], ['sepia', <Coffee size={11} />, '紙'], ['dark', <Moon size={11} />, '暗']] as const).map(([th, icon, label]) => (
+                        <button key={th} onClick={() => updateSetting('theme', th as Theme)} style={{
+                          flex: 1, appearance: 'none', cursor: 'pointer',
+                          padding: '6px 0', borderRadius: 6,
+                          border: `1.5px solid ${settings.theme === th ? A.base : theme.line}`,
+                          background: settings.theme === th ? A.tint : 'transparent',
+                          color: settings.theme === th ? A.base : theme.muted,
+                          fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                          transition: 'all .12s ease',
+                        }}>
+                          {icon}{label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ height: 1, background: theme.line, margin: '0 6px 6px' }} />
+
+                  {/* Font size */}
+                  <div style={{ padding: '4px 8px 8px' }}>
+                    <div style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.16em', textTransform: 'uppercase',
+                      color: theme.muted, marginBottom: 8,
+                    }}>
+                      字體大小&nbsp;
+                      <span style={{ color: theme.ink, fontVariantNumeric: 'tabular-nums' }}>{settings.fontSize}px</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: F.serif, fontSize: 13, color: theme.muted }}>A</span>
+                      <input
+                        type="range" min="13" max="28" step="1"
+                        value={settings.fontSize}
+                        onChange={e => updateSetting('fontSize', parseInt(e.target.value))}
+                        style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }}
+                      />
+                      <span style={{ fontFamily: F.serif, fontSize: 20, color: theme.muted }}>A</span>
+                    </div>
+                  </div>
+
+                  {/* Line height */}
+                  <div style={{ padding: '0 8px 8px' }}>
+                    <div style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.16em', textTransform: 'uppercase',
+                      color: theme.muted, marginBottom: 8,
+                    }}>行間距</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 3 }}>
+                      {[1.4, 1.55, 1.75, 1.9, 2.1].map(lh => (
+                        <button key={lh} onClick={() => updateSetting('lineHeight', lh)} style={{
+                          appearance: 'none', border: 'none', cursor: 'pointer',
+                          padding: '6px 0', borderRadius: 6,
+                          background: settings.lineHeight === lh ? A.base : theme.pill,
+                          color: settings.lineHeight === lh ? '#fff' : theme.muted,
+                          fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                          transition: 'all .12s ease',
+                        }}>{lh}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ height: 1, background: theme.line, margin: '4px 6px 6px' }} />
+
+                  {/* Actions */}
+                  {[
+                    { icon: <Type size={13} />, label: '編輯讀經計劃', action: () => { setIsEditingSchedule(true); setSettingsOpen(false); } },
+                    { icon: <Download size={13} />, label: '匯出進度', action: () => { handleExportProgress(); setSettingsOpen(false); } },
+                    { icon: <Upload size={13} />, label: '匯入進度', action: () => { setShowImportField(f => !f); } },
+                  ].map((row, i) => (
+                    <button key={i} onClick={row.action} style={{
+                      width: '100%', appearance: 'none', border: 'none', cursor: 'pointer',
+                      background: 'transparent', color: theme.ink, textAlign: 'left',
+                      padding: '9px 12px', borderRadius: 7,
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      fontFamily: F.sans, fontSize: 13,
+                      transition: 'background .1s ease',
+                    }}>
+                      <span style={{ color: theme.muted }}>{row.icon}</span>
+                      {row.label}
+                    </button>
+                  ))}
+
+                  {showImportField && (
+                    <div style={{ padding: '4px 8px 8px' }}>
+                      <input
+                        type="text"
+                        placeholder="在此貼上進度代碼…"
+                        value={migrationInput}
+                        onChange={e => setMigrationInput(e.target.value)}
+                        style={{
+                          width: '100%', padding: '8px 10px',
+                          borderRadius: 7, border: `1px solid ${theme.lineStrong}`,
+                          background: theme.bg, color: theme.ink,
+                          fontFamily: 'ui-monospace, monospace', fontSize: 11,
+                          outline: 'none', boxSizing: 'border-box',
+                        }}
+                      />
+                      <button onClick={handleImportProgress} style={{
+                        width: '100%', marginTop: 6,
+                        appearance: 'none', border: 'none', cursor: 'pointer',
+                        padding: '8px 0', borderRadius: 7,
+                        background: A.base, color: '#fff',
+                        fontFamily: F.label, fontSize: 12, fontWeight: 600,
+                      }}>確認匯入</button>
                     </div>
                   )}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* SCROLL CONTAINER */}
+          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto' }}>
+            {loading ? (
+              <div style={{
+                height: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 14,
+              }}>
+                <BookOpen size={40} style={{ color: A.base, opacity: 0.25 }} />
+                <p style={{
+                  fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                  letterSpacing: '0.3em', textTransform: 'uppercase', color: theme.muted,
+                }}>正在開啟聖經卷軸</p>
               </div>
-              <div className="p-8 md:p-20 pb-32">
-                <div className={`grid gap-x-12 ${verseGapClass} ${parallelData ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`} style={{ fontSize: `${settings.fontSize}px`, lineHeight: settings.lineHeight }}>
-                  {filteredVerses.map((v, i) => (
-                    <React.Fragment key={i}>
-                      <div className="flex gap-6 md:gap-10 items-start group relative">
-                        <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-indigo-400/60' : 'text-indigo-600/60'}`}>{v.verse}</span>
-                        <div className={`leading-[inherit] font-serif whitespace-pre-wrap flex-1 text-justify ${settings.theme === 'dark' ? 'text-[#d1d1d1]' : settings.theme === 'sepia' ? 'text-[#5b4636]' : 'text-slate-900'
-                          }`}>
-                          <VerseText text={v.text} theme={settings.theme} />
-                        </div>
-                      </div>
-                      {parallelData && (
-                        <div className={`flex gap-6 md:gap-10 items-start p-6 md:p-10 rounded-3xl transition-colors duration-500 ${settings.theme === 'dark' ? 'bg-white/[0.03]' : settings.theme === 'sepia' ? 'bg-[#5b4636]/[0.02]' : 'bg-indigo-500/[0.02]'
-                          }`}>
-                          <span className={`text-[0.6em] font-black w-8 text-right mt-1 shrink-0 transition-opacity ${settings.theme === 'dark' ? 'text-emerald-400/60' : 'text-emerald-600/60'}`}>{filteredParallel && filteredParallel[i] ? filteredParallel[i].verse : v.verse}</span>
-                          <div className={`leading-[inherit] font-serif italic whitespace-pre-wrap flex-1 text-justify ${settings.theme === 'dark' ? 'text-white/40' : settings.theme === 'sepia' ? 'text-[#5b4636]/60' : 'text-slate-500'
-                            }`}>
-                            {filteredParallel && filteredParallel[i] ? <VerseText text={filteredParallel[i].text} theme={settings.theme} /> : <span className="opacity-20 italic">無此節對應內容</span>}
+            ) : error ? (
+              <div style={{
+                margin: 40, padding: 20, borderRadius: 12,
+                background: 'rgba(225,29,72,0.07)', border: '1px solid rgba(225,29,72,0.18)',
+                color: '#e11d48', display: 'flex', gap: 12, alignItems: 'flex-start',
+              }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, margin: 0 }}>{error}</p>
+              </div>
+            ) : bibleData ? (
+              <div style={{
+                maxWidth: 720, margin: '0 auto',
+                padding: `48px ${Math.max(24, settings.fontSize * 1.8)}px 80px`,
+              }}>
+                {/* Reference header */}
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{
+                    fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                    letterSpacing: '0.2em', textTransform: 'uppercase',
+                    color: theme.muted, marginBottom: 8,
+                  }}>
+                    {settings.scheduleMode === 'daily' && navStatus.inPlan
+                      ? `今日讀經 · ${selectedDate.slice(5).replace('-', '月')}日`
+                      : '自由閱讀'}
+                  </div>
+                  <h1 style={{
+                    fontFamily: F.serif, fontSize: 40, fontWeight: 600,
+                    letterSpacing: '-0.02em', margin: 0, color: theme.ink,
+                    lineHeight: 1.1,
+                  }}>{bibleData.reference}</h1>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center',
+                      fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                      padding: '3px 9px', borderRadius: 999,
+                      background: A.tint, color: A.base,
+                    }}>{settings.primaryVersion}</span>
+                    {settings.secondaryVersion && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                        letterSpacing: '0.08em', textTransform: 'uppercase',
+                        padding: '3px 9px', borderRadius: 999,
+                        background: 'rgba(74,107,58,0.10)', color: theme.success,
+                      }}>{settings.secondaryVersion}</span>
+                    )}
+                    <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>
+                      {filteredVerses.length} 節
+                    </span>
+                  </div>
+                </div>
+
+                {/* Verses */}
+                {readingMode === 'standard' ? (
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: filteredParallel ? '1fr 1fr' : '1fr',
+                    columnGap: 32,
+                    rowGap: Math.round(settings.lineHeight * 14),
+                    fontFamily: F.serif,
+                    fontSize: settings.fontSize,
+                    lineHeight: settings.lineHeight,
+                    color: theme.ink,
+                  }}>
+                    {filteredVerses.map((v, i) => (
+                      <React.Fragment key={i}>
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                          <span style={{
+                            fontFamily: F.label,
+                            fontSize: Math.round(settings.fontSize * 0.56),
+                            fontWeight: 600,
+                            color: A.base,
+                            minWidth: 22,
+                            textAlign: 'right',
+                            opacity: 0.7,
+                            flexShrink: 0,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}>{v.verse}</span>
+                          <div style={{ flex: 1, textAlign: 'justify' }}>
+                            <VerseText text={v.text} theme={settings.theme} />
                           </div>
                         </div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-                <div className="mt-40 border-t pt-24 text-center space-y-12">
+                        {filteredParallel && (
+                          <div style={{ display: 'flex', gap: 16, alignItems: 'baseline', opacity: 0.62 }}>
+                            <span style={{
+                              fontFamily: F.label,
+                              fontSize: Math.round(settings.fontSize * 0.56),
+                              fontWeight: 600,
+                              color: theme.success,
+                              minWidth: 22,
+                              textAlign: 'right',
+                              flexShrink: 0,
+                              fontVariantNumeric: 'tabular-nums',
+                            }}>{filteredParallel[i]?.verse ?? v.verse}</span>
+                            <div style={{ flex: 1, fontStyle: 'italic', color: theme.inkSoft, textAlign: 'justify' }}>
+                              {filteredParallel[i]
+                                ? <VerseText text={filteredParallel[i].text} theme={settings.theme} />
+                                : <span style={{ opacity: 0.3 }}>無對應內容</span>}
+                            </div>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                ) : (
+                  <BookPageVerses
+                    verses={filteredVerses}
+                    theme={settings.theme}
+                    fontSize={settings.fontSize}
+                    lineHeight={settings.lineHeight}
+                  />
+                )}
+
+                {/* Completion footer */}
+                <div style={{
+                  marginTop: 80, paddingTop: 28,
+                  borderTop: `1px solid ${theme.line}`,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+                }}>
                   {navStatus.inPlan && (
                     <button
                       onClick={markCurrentAsRead}
-                      className={`px-16 py-8 rounded-[3rem] font-black text-2xl transition-all shadow-2xl flex items-center gap-4 mx-auto hover:scale-105 active:scale-95 ${navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId)
-                        ? 'bg-green-600 text-white shadow-green-100'
-                        : 'bg-indigo-600 text-white shadow-indigo-100'
-                        }`}
+                      style={{
+                        appearance: 'none', border: 'none', cursor: 'pointer',
+                        padding: '13px 28px', borderRadius: 10,
+                        background: (navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId))
+                          ? theme.success : A.base,
+                        color: '#fff',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        fontFamily: F.sans, fontSize: 15, fontWeight: 600,
+                        letterSpacing: '0.01em',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                        transition: 'background .2s ease',
+                      }}
                     >
-                      {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId) ? <CheckCircle2 size={36} /> : <PartyPopper size={36} />}
-                      {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId) ? "今日已讀" : "讀完了！"}
+                      {navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId)
+                        ? <><CheckCircle2 size={18} /> 已完成 · {bibleData.reference}</>
+                        : <><PartyPopper size={18} /> 讀完了 — {bibleData.reference}</>}
                     </button>
                   )}
-                  <div className="flex flex-wrap items-center justify-center gap-6">
-                    <button onClick={handleScrollToTop} className="px-8 py-4 rounded-2xl bg-black/5 font-bold flex items-center gap-2 hover:bg-black/10 transition-colors uppercase text-xs tracking-widest"><ChevronUp size={18} /> 回到頂部</button>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <button
+                      onClick={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                      style={navBtn(false, theme)}
+                    ><ChevronUp size={13} /> 回頂</button>
+
                     {navStatus.inPlan ? (
-                      <div className="flex flex-wrap items-center justify-center gap-4">
+                      <>
+                        {navStatus.prevItem && (
+                          <button
+                            onClick={() => fetchBible({ book: (navStatus.prevItem as ScheduleItem).book, chapter: (navStatus.prevItem as ScheduleItem).chapter, startVerse: (navStatus.prevItem as ScheduleItem).startVerse, endVerse: (navStatus.prevItem as ScheduleItem).endVerse, label: (navStatus.prevItem as ScheduleItem).label, scheduleItemId: (navStatus.prevItem as ScheduleItem).id })}
+                            style={navBtn(false, theme)}
+                          ><ChevronLeft size={13} /> {(navStatus.prevItem as ScheduleItem).label}</button>
+                        )}
                         {navStatus.nextItem && (
-                          <button onClick={() => fetchBible({ book: navStatus.nextItem!.book, chapter: navStatus.nextItem!.chapter, startVerse: navStatus.nextItem!.startVerse, endVerse: navStatus.nextItem!.endVerse, label: navStatus.nextItem!.label, scheduleItemId: navStatus.nextItem!.id })} className="px-10 py-4 rounded-2xl bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-indigo-700 hover:translate-x-1 transition-all">
-                            繼續讀經 <ChevronRightIcon size={20} />
-                          </button>
+                          <button
+                            onClick={() => fetchBible({ book: (navStatus.nextItem as ScheduleItem).book, chapter: (navStatus.nextItem as ScheduleItem).chapter, startVerse: (navStatus.nextItem as ScheduleItem).startVerse, endVerse: (navStatus.nextItem as ScheduleItem).endVerse, label: (navStatus.nextItem as ScheduleItem).label, scheduleItemId: (navStatus.nextItem as ScheduleItem).id })}
+                            style={navBtn(true, theme)}
+                          >繼續：{(navStatus.nextItem as ScheduleItem).label} <ChevronRight size={13} /></button>
                         )}
                         {!navStatus.nextItem && nextDayWithPlan && (
-                          <button onClick={goToNextDay} className="px-10 py-4 rounded-2xl bg-slate-700 text-white font-bold flex items-center gap-3 shadow-xl hover:bg-slate-800 hover:translate-x-1 transition-all">
-                            前往下一天 <CalendarDays size={20} />
+                          <button onClick={goToNextDay} style={navBtn(true, theme)}>
+                            前往下一天 <CalendarDays size={13} />
                           </button>
                         )}
-                      </div>
+                      </>
                     ) : (
-                      <div className="flex gap-4">
-                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })} className="px-8 py-4 rounded-2xl bg-slate-100 font-bold flex items-center gap-2 hover:bg-slate-200 transition-colors"><ChevronLeft size={18} /> 上一章</button>
-                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })} className="px-8 py-4 rounded-2xl bg-slate-800 text-white font-bold flex items-center gap-2 hover:bg-black transition-colors">下一章 <ChevronRight size={18} /></button>
-                      </div>
+                      <>
+                        <button
+                          onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })}
+                          style={navBtn(false, theme)}
+                        ><ChevronLeft size={13} /> 上一章</button>
+                        <button
+                          onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })}
+                          style={navBtn(true, theme)}
+                        >下一章 <ChevronRight size={13} /></button>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <EmptyState theme={settings.theme} />
-          )}
+            ) : (
+              /* Empty state */
+              <div style={{
+                height: '100%', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 14, padding: 40,
+              }}>
+                <div style={{ position: 'relative' }}>
+                  <BookOpen size={52} style={{ color: A.base, opacity: 0.18 }} />
+                </div>
+                <h3 style={{
+                  fontFamily: F.serif, fontSize: 26, fontWeight: 600,
+                  color: theme.ink, opacity: 0.35, margin: 0, textAlign: 'center',
+                }}>靈修從此刻開始</h3>
+                <p style={{
+                  fontFamily: F.sans, fontSize: 14, color: theme.muted,
+                  textAlign: 'center', maxWidth: 300, lineHeight: 1.65, margin: 0,
+                }}>
+                  點選左側日曆中的日期，<br />或在搜尋框輸入書卷章節。
+                </p>
+              </div>
+            )}
+
+            {/* Footer */}
+            {bibleData && (
+              <footer style={{
+                padding: '40px 32px 48px',
+                borderTop: `1px solid ${theme.line}`,
+              }}>
+                <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
+                  <p style={{
+                    fontFamily: F.label, fontSize: 10, color: theme.muted,
+                    lineHeight: 1.8, marginBottom: 12,
+                  }}>
+                    本站聖經經文取自信望愛（FHL）聖經資料庫公開 API。各聖經譯本之著作權分屬原著作權人所有，本站僅供閱讀學習使用。{' '}
+                    <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer"
+                       style={{ color: A.soft, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                      bible.fhl.net
+                    </a>
+                  </p>
+                  <p style={{
+                    fontFamily: 'ui-monospace, monospace', fontSize: 9,
+                    color: theme.faint, margin: 0,
+                  }}>{appVersion}</p>
+                </div>
+              </footer>
+            )}
+          </div>
         </main>
       </div>
 
-      <footer className={`mt-24 py-20 border-t transition-colors duration-500 ${settings.theme === 'dark' ? 'border-white/5 text-white/30' :
-        settings.theme === 'sepia' ? 'border-[#5b4636]/10 text-[#5b4636]/50' :
-          'border-slate-200/40 text-slate-400/80'
-        }`}>
-        <div className="max-w-3xl mx-auto px-6 text-center space-y-8">
-          <div className="space-y-2">
-            <h4 className={`text-xs font-black uppercase tracking-widest ${settings.theme === 'dark' ? 'text-white/40' :
-              settings.theme === 'sepia' ? 'text-[#5b4636]/60' :
-                'text-slate-500'
-              }`}>資料來源與版權聲明</h4>
-            <div className={`h-1 w-8 mx-auto rounded-full ${settings.theme === 'dark' ? 'bg-white/5' : 'bg-slate-200'}`} />
-          </div>
-          <div className="text-[11px] space-y-4 leading-loose font-medium opacity-60">
-            <p>本站聖經經文與研經資料，取自<br className="sm:hidden" />信望愛（FHL）聖經資料庫所提供之公開 API<br />資料來源：<a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">https://bible.fhl.net</a></p>
-            <p>各聖經譯本之著作權分屬原著作權人所有，本站僅透過 API 即時呈現相關內容，僅供閱讀與學習使用。</p>
-            <p>信望愛長期致力於聖經資料的整理、維護與開放，並鼓勵基督徒開發者善用其 API 服事更多人。<br />若您對完整資料或研經工具有興趣，請造訪 <a href="https://bible.fhl.net" target="_blank" rel="noopener noreferrer" className="hover:underline hover:opacity-100 transition-opacity decoration-indigo-300 underline-offset-2 font-bold">信望愛官方網站</a>。</p>
-          </div>
-          <div className={`pt-8 border-t border-transparent text-[10px] italic opacity-40 ${settings.theme === 'dark' ? 'text-white/20' :
-            settings.theme === 'sepia' ? 'text-[#5b4636]/30' :
-              'text-slate-400'
-            }`}>
-            <p>本站為獨立開發之工具，與信望愛網站無隸屬或代表關係。</p>
-            <p className="mt-4 font-mono select-all" title="應用程式版本資訊">{appVersion}</p>
-          </div>
-        </div>
-      </footer>
+      {/* ─── SCHEDULE EDIT DRAWER ──────────────────────────────────────── */}
+      {isEditingSchedule && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 80,
+        }}>
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsEditingSchedule(false)}
+            style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.15)' }}
+          />
+          {/* Drawer */}
+          <div style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0, width: 400,
+            background: theme.surface, borderLeft: `1px solid ${theme.lineStrong}`,
+            boxShadow: '-12px 0 40px rgba(0,0,0,0.10)', zIndex: 1,
+            display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{
+              padding: '20px 24px', borderBottom: `1px solid ${theme.line}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <h3 style={{ fontFamily: F.serif, fontSize: 20, margin: 0, color: theme.ink, fontWeight: 600 }}>
+                編輯讀經計劃
+              </h3>
+              <button onClick={() => setIsEditingSchedule(false)} style={iconBtn(theme)}>
+                <X size={18} />
+              </button>
+            </div>
 
-      {showVersionPicker.active && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-xl animate-in fade-in duration-300">
-          <div className={`w-full max-w-2xl max-h-[85vh] rounded-[3.5rem] shadow-[0_40px_100px_-15px_rgba(0,0,0,0.3)] flex flex-col overflow-hidden border-2 animate-in zoom-in-95 duration-300 transition-colors duration-500 ${themes[settings.theme]}`}>
-            <div className="p-12 border-b bg-black/[0.01]">
-              <div className="flex items-center justify-between mb-10">
-                <div>
-                  <h3 className="text-4xl font-black tracking-tight">聖經譯本</h3>
-                  <p className="text-slate-400 text-sm mt-1 font-medium">切換不同譯本以獲得更深度的理解</p>
-                </div>
-                <button onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })} className="p-3 hover:bg-black/5 rounded-full transition-colors"><X size={32} /></button>
+            <div style={{ flex: 1, padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Mode tabs */}
+              <div style={{ display: 'flex', gap: 2, padding: 3, background: theme.pill, borderRadius: 8 }}>
+                {([['static', '靜態'], ['daily', '每日 (JSON)']] as const).map(([mode, label]) => (
+                  <button key={mode} onClick={() => updateSetting('scheduleMode', mode)} style={{
+                    flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+                    padding: '6px 0', borderRadius: 6,
+                    background: settings.scheduleMode === mode ? theme.surface : 'transparent',
+                    color: settings.scheduleMode === mode ? A.base : theme.muted,
+                    fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                    boxShadow: settings.scheduleMode === mode ? `0 1px 0 ${theme.line}` : 'none',
+                  }}>{label}</button>
+                ))}
               </div>
-              <div className="relative">
-                <input type="text" placeholder="搜尋譯本名稱或簡稱..." className={`w-full px-8 py-5 rounded-[1.8rem] border-2 outline-none focus:border-indigo-500 transition-all font-bold ${settings.theme === 'dark' ? 'bg-black/20 border-white/10 text-white' : 'bg-slate-100 border-transparent'}`} value={versionSearch} onChange={(e) => setVersionSearch(e.target.value)} />
-                <Search className="absolute right-6 top-1/2 -translate-y-1/2 opacity-20" size={24} />
+
+              <textarea
+                value={settings.scheduleMode === 'static' ? settings.scheduleText : settings.dailyScheduleJson}
+                onChange={e => setSettings(s => ({
+                  ...s,
+                  [settings.scheduleMode === 'static' ? 'scheduleText' : 'dailyScheduleJson']: e.target.value,
+                }))}
+                style={{
+                  flex: 1, minHeight: 240, padding: 14,
+                  borderRadius: 8, border: `1px solid ${theme.lineStrong}`,
+                  background: theme.bg, color: theme.ink,
+                  fontFamily: 'ui-monospace, monospace', fontSize: 12,
+                  resize: 'vertical', outline: 'none', lineHeight: 1.6,
+                }}
+                placeholder={settings.scheduleMode === 'static' ? '格式：馬太 1-3' : '{"2026-01-01": "太 1"}'}
+              />
+
+              {/* Export / Import */}
+              <div style={{ borderTop: `1px solid ${theme.line}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <span style={{
+                    fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                    letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
+                  }}>進度備份</span>
+                  <span style={{ fontFamily: F.label, fontSize: 11, color: A.base, fontWeight: 600 }}>
+                    已完成 {settings.completedTasks.length} 章
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button onClick={handleExportProgress} style={{
+                    appearance: 'none', border: 'none', cursor: 'pointer',
+                    padding: '10px 0', borderRadius: 8,
+                    background: A.tint, color: A.base,
+                    fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                    <Download size={13} /> 匯出進度
+                  </button>
+                  <button onClick={handleImportProgress} disabled={!migrationInput.trim()} style={{
+                    appearance: 'none', border: 'none', cursor: migrationInput.trim() ? 'pointer' : 'default',
+                    padding: '10px 0', borderRadius: 8,
+                    background: theme.ink, color: theme.bg,
+                    fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    opacity: migrationInput.trim() ? 1 : 0.4,
+                  }}>
+                    <Upload size={13} /> 匯入進度
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="在此貼上匯出的進度代碼…"
+                  value={migrationInput}
+                  onChange={e => setMigrationInput(e.target.value)}
+                  style={{
+                    padding: '9px 12px', borderRadius: 8,
+                    border: `1px solid ${theme.lineStrong}`,
+                    background: theme.bg, color: theme.ink,
+                    fontFamily: 'ui-monospace, monospace', fontSize: 11,
+                    outline: 'none',
+                  }}
+                />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-12 pt-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div style={{ padding: '16px 24px', borderTop: `1px solid ${theme.line}` }}>
+              <button
+                onClick={() => { saveSettings(settings); showToast('計劃與設定已儲存'); setIsEditingSchedule(false); }}
+                style={{
+                  width: '100%', appearance: 'none', border: 'none', cursor: 'pointer',
+                  padding: '12px 0', borderRadius: 9,
+                  background: A.base, color: '#fff',
+                  fontFamily: F.sans, fontSize: 14, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: `0 4px 12px ${A.tint}`,
+                }}
+              ><Save size={16} /> 儲存並關閉</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── VERSION PICKER MODAL ──────────────────────────────────────── */}
+      {showVersionPicker.active && (
+        <div
+          onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+            background: 'rgba(0,0,0,0.30)', backdropFilter: 'blur(8px)',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 580, maxHeight: '80vh',
+              borderRadius: 20, overflow: 'hidden',
+              background: theme.surface, border: `1px solid ${theme.lineStrong}`,
+              boxShadow: '0 40px 80px rgba(0,0,0,0.22)',
+              display: 'flex', flexDirection: 'column',
+            }}
+          >
+            {/* Header */}
+            <div style={{ padding: '28px 32px 20px', borderBottom: `1px solid ${theme.line}` }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ fontFamily: F.serif, fontSize: 28, fontWeight: 600, margin: '0 0 4px', color: theme.ink }}>
+                    聖經譯本
+                  </h3>
+                  <p style={{ fontFamily: F.sans, fontSize: 13, color: theme.muted, margin: 0 }}>
+                    切換不同譯本以獲得更深度的理解
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowVersionPicker({ ...showVersionPicker, active: false })}
+                  style={iconBtn(theme)}
+                ><X size={20} /></button>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 14px', borderRadius: 10,
+                background: theme.pill, color: theme.muted,
+              }}>
+                <Search size={14} style={{ flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="搜尋譯本名稱或簡稱…"
+                  value={versionSearch}
+                  onChange={e => setVersionSearch(e.target.value)}
+                  style={{
+                    appearance: 'none', border: 'none', outline: 'none',
+                    background: 'transparent', color: theme.ink,
+                    fontFamily: F.sans, fontSize: 14, flex: 1,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {filteredVersions.map(ver => {
                   const isActive = (showVersionPicker.target === 'primary' ? settings.primaryVersion : settings.secondaryVersion) === ver.id;
                   return (
-                    <button key={`${ver.id}`} onClick={() => {
-                      const isPrimary = showVersionPicker.target === 'primary';
-                      const updated = updateSetting(isPrimary ? 'primaryVersion' : 'secondaryVersion', ver.id);
-                      setShowVersionPicker({ ...showVersionPicker, active: false });
-                      if (bibleData) {
-                        fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter, startVerse: bibleData.startVerse, endVerse: bibleData.endVerse, label: bibleData.reference }, updated.primaryVersion, updated.secondaryVersion);
-                      }
-                    }} className={`text-left p-6 rounded-[2rem] border-2 transition-all flex justify-between items-center group ${isActive ? 'border-indigo-600 bg-indigo-600/10' : 'bg-black/5 border-transparent hover:border-indigo-300 hover:bg-white'}`}>
-                      <div className="min-w-0 pr-4">
-                        <div className="font-black text-indigo-600 text-lg flex items-center gap-2">{ver.id} <span className="text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">{ver.lang}</span></div>
-                        <div className="text-xs opacity-50 truncate mt-1 font-bold">{ver.name}</div>
+                    <button
+                      key={ver.id}
+                      onClick={() => {
+                        const isPrimary = showVersionPicker.target === 'primary';
+                        const updated = updateSetting(isPrimary ? 'primaryVersion' : 'secondaryVersion', ver.id);
+                        setShowVersionPicker({ ...showVersionPicker, active: false });
+                        if (bibleData) {
+                          fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter, startVerse: bibleData.startVerse, endVerse: bibleData.endVerse, label: bibleData.reference }, updated.primaryVersion, updated.secondaryVersion);
+                        }
+                      }}
+                      style={{
+                        appearance: 'none', cursor: 'pointer', textAlign: 'left',
+                        padding: '14px 16px', borderRadius: 12,
+                        border: `1.5px solid ${isActive ? A.base : theme.line}`,
+                        background: isActive ? A.tint : theme.bg,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        transition: 'all .12s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{
+                          fontFamily: F.label, fontSize: 14, fontWeight: 700,
+                          color: isActive ? A.base : theme.ink, marginBottom: 2,
+                        }}>{ver.id}</div>
+                        <div style={{ fontFamily: F.sans, fontSize: 11, color: theme.muted }}>{ver.name}</div>
                       </div>
-                      {isActive && <CheckCircle2 size={24} className="text-indigo-600" />}
+                      {isActive && <CheckCircle2 size={18} style={{ color: A.base, flexShrink: 0 }} />}
                     </button>
                   );
                 })}
