@@ -44,15 +44,32 @@ const T: Record<Theme, TK> = {
     pill: 'rgba(0,0,0,0.05)', success: '#4a6b3a',
   },
   dark: {
-    bg: '#1a1814', surface: '#23201a', panel: '#2d2a22',
-    ink: '#e8e0cc', inkSoft: '#b5ab93', muted: '#857d68',
-    faint: '#4d4536',
-    line: 'rgba(232,224,204,0.10)', lineStrong: 'rgba(232,224,204,0.20)',
-    pill: 'rgba(232,224,204,0.06)', success: '#8aa872',
+    bg: '#1c1a16', surface: '#252219', panel: '#2f2c24',
+    ink: '#ede5cf', inkSoft: '#bdb49a', muted: '#8a8270',
+    faint: '#52493a',
+    line: 'rgba(237,229,207,0.14)', lineStrong: 'rgba(237,229,207,0.26)',
+    pill: 'rgba(237,229,207,0.07)', success: '#7ab860',
   },
 } as const;
 
-const A = { base: '#1e3a5f', soft: '#3a5d8a', tint: 'rgba(30,58,95,0.10)' };
+// ─── ACCENT SYSTEM ───────────────────────────────────────────────────────────
+
+type AccentTone = { base: string; soft: string; tint: string };
+
+const ACCENT_PRESETS: Record<string, { label: string; light: AccentTone; dark: AccentTone }> = {
+  ink:     { label: '墨藍', light: { base: '#1e3a5f', soft: '#3a5d8a', tint: 'rgba(30,58,95,0.10)'    }, dark: { base: '#7aafd4', soft: '#9dc3e0', tint: 'rgba(122,175,212,0.16)' } },
+  pine:    { label: '松綠', light: { base: '#2d5a3d', soft: '#4a8060', tint: 'rgba(45,90,61,0.10)'    }, dark: { base: '#6ab88a', soft: '#8ecba6', tint: 'rgba(106,184,138,0.16)' } },
+  crimson: { label: '暗紅', light: { base: '#7a1e35', soft: '#9f3652', tint: 'rgba(122,30,53,0.10)'   }, dark: { base: '#d47a8f', soft: '#e09aaa', tint: 'rgba(212,122,143,0.16)' } },
+  umber:   { label: '赭褐', light: { base: '#7a4020', soft: '#a05c35', tint: 'rgba(122,64,32,0.10)'   }, dark: { base: '#d4956b', soft: '#e0aa87', tint: 'rgba(212,149,107,0.16)' } },
+  violet:  { label: '紫墨', light: { base: '#3d2060', soft: '#60418a', tint: 'rgba(61,32,96,0.10)'    }, dark: { base: '#9d7dd4', soft: '#b89de0', tint: 'rgba(157,125,212,0.16)' } },
+};
+
+const A_DEFAULT: AccentTone = ACCENT_PRESETS.ink.light;
+
+function getAccent(key: string, theme: Theme): AccentTone {
+  const preset = ACCENT_PRESETS[key] ?? ACCENT_PRESETS.ink;
+  return theme === 'dark' ? preset.dark : preset.light;
+}
 
 const F = {
   serif: `"Noto Serif TC","Source Han Serif TC",Georgia,"Times New Roman",serif`,
@@ -88,13 +105,13 @@ function modeBtn(active: boolean, t: TK): React.CSSProperties {
   };
 }
 
-function navBtn(accent: boolean, t: TK): React.CSSProperties {
+function navBtn(accent: boolean, t: TK, a: AccentTone = A_DEFAULT): React.CSSProperties {
   return {
     appearance: 'none', cursor: 'pointer',
     padding: '10px 18px', borderRadius: 8,
     border: accent ? 'none' : `1px solid ${t.line}`,
-    background: accent ? A.tint : 'transparent',
-    color: accent ? A.base : t.inkSoft,
+    background: accent ? a.tint : 'transparent',
+    color: accent ? a.base : t.inkSoft,
     fontFamily: F.sans, fontSize: 13, fontWeight: 500,
     display: 'inline-flex', alignItems: 'center', gap: 6,
     letterSpacing: '0.01em',
@@ -104,7 +121,7 @@ function navBtn(accent: boolean, t: TK): React.CSSProperties {
 
 // ─── VERSE TEXT ──────────────────────────────────────────────────────────────
 
-const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) => {
+const VerseText: React.FC<{ text: string; theme: Theme; accent?: AccentTone }> = ({ text, theme, accent = A_DEFAULT }) => {
   if (text.trim() === 'a') {
     return <span style={{ opacity: 0.3, fontStyle: 'italic', fontSize: '0.8em' }}>[併入上節]</span>;
   }
@@ -129,7 +146,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
             <h2 key={i} style={{
               display: 'block', fontSize: '1.2em', fontWeight: 700,
               marginBottom: '0.5em', marginTop: '0.3em',
-              color: A.base, letterSpacing: '-0.01em',
+              color: accent.base, letterSpacing: '-0.01em',
             }}>{renderContent(content)}</h2>
           );
         }
@@ -138,7 +155,7 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
           return (
             <h3 key={i} style={{
               display: 'block', fontSize: '1.1em', fontWeight: 600,
-              marginBottom: '0.4em', marginTop: '0.2em', color: A.soft,
+              marginBottom: '0.4em', marginTop: '0.2em', color: accent.soft,
             }}>{renderContent(content)}</h3>
           );
         }
@@ -191,12 +208,13 @@ const BookPageVerses: React.FC<{
   theme: Theme;
   fontSize: number;
   lineHeight: number;
-}> = ({ verses, theme, fontSize, lineHeight }) => {
+  accent?: AccentTone;
+}> = ({ verses, theme, fontSize, lineHeight, accent = A_DEFAULT }) => {
   const t: TK = T[theme];
   const baseSize = fontSize + 1;
   const sup: React.CSSProperties = {
     fontFamily: F.label, fontSize: 10, fontWeight: 600,
-    color: A.base, marginRight: 3, marginLeft: 2,
+    color: accent.base, marginRight: 3, marginLeft: 2,
     verticalAlign: 'super', letterSpacing: '0.02em',
     fontVariantNumeric: 'tabular-nums',
   };
@@ -236,7 +254,7 @@ const BookPageVerses: React.FC<{
         if (seg.type === 'header') {
           return (
             <div key={si} style={{ marginBottom: '0.5em', marginTop: si > 0 ? '1em' : 0, clear: 'both' }}>
-              <VerseText text={seg.html} theme={theme} />
+              <VerseText text={seg.html} theme={theme} accent={accent} />
             </div>
           );
         }
@@ -254,16 +272,16 @@ const BookPageVerses: React.FC<{
               <span style={{
                 float: 'left', fontFamily: F.serif,
                 fontSize: baseSize * 4, lineHeight: 0.88,
-                color: A.base, fontWeight: 600,
+                color: accent.base, fontWeight: 600,
                 marginRight: 12, marginTop: 6, letterSpacing: '-0.02em',
               }}>{dropChar}</span>
             )}
             <sup style={sup}>{first.verse}</sup>
-            <VerseText text={firstBody} theme={theme} />{' '}
+            <VerseText text={firstBody} theme={theme} accent={accent} />{' '}
             {rest.map(v => (
               <React.Fragment key={v.verse}>
                 <sup style={sup}>{v.verse}</sup>
-                <VerseText text={v.text} theme={theme} />{' '}
+                <VerseText text={v.text} theme={theme} accent={accent} />{' '}
               </React.Fragment>
             ))}
           </p>
@@ -287,6 +305,7 @@ const App: React.FC = () => {
     fontSize: 18,
     lineHeight: 1.75,
     theme: 'sepia',
+    accent: 'ink',
     primaryVersion: 'unv',
     secondaryVersion: null,
     scheduleHash: "",
@@ -685,6 +704,7 @@ const App: React.FC = () => {
   // ── Derived ────────────────────────────────────────────────────────────────
 
   const theme = T[settings.theme];
+  const A = getAccent(settings.accent ?? 'ink', settings.theme);
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v1.0.0-dev';
 
   const todayStr = (() => {
@@ -744,11 +764,20 @@ const App: React.FC = () => {
                 2026 每日讀經
               </div>
             </div>
-            <button
-              onClick={() => setMobileSheet(s => s === 'menu' ? null : 'menu')}
-              style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              aria-label="設定"
-            ><Settings size={19} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <button
+                onClick={() => { const order: Theme[] = ['light', 'sepia', 'dark']; updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]); }}
+                style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="切換外觀"
+              >
+                {settings.theme === 'dark' ? <Moon size={17} /> : settings.theme === 'sepia' ? <Coffee size={17} /> : <Sun size={17} />}
+              </button>
+              <button
+                onClick={() => setMobileSheet(s => s === 'menu' ? null : 'menu')}
+                style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="設定"
+              ><Settings size={19} /></button>
+            </div>
           </div>
 
           {/* Mobile reading area */}
@@ -794,12 +823,12 @@ const App: React.FC = () => {
                     {filteredVerses.map((v, i) => (
                       <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
                         <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
-                        <div style={{ flex: 1, textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} /></div>
+                        <div style={{ flex: 1, textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} accent={A} /></div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} />
+                  <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} accent={A} />
                 )}
 
                 {/* Completion + nav footer */}
@@ -1017,19 +1046,30 @@ const App: React.FC = () => {
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>外觀</div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {([['light', <Sun size={13} />, '亮'], ['sepia', <Coffee size={13} />, '紙感'], ['dark', <Moon size={13} />, '深夜']] as const).map(([th, icon, label]) => (
-                        <button key={th} onClick={() => updateSetting('theme', th as Theme)} style={{ flex: 1, appearance: 'none', cursor: 'pointer', padding: '10px 0', borderRadius: 10, border: `1.5px solid ${settings.theme === th ? A.base : theme.line}`, background: settings.theme === th ? A.tint : 'transparent', color: settings.theme === th ? A.base : theme.muted, fontFamily: F.label, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>{icon}{label}</button>
-                      ))}
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>
+                      配色&nbsp;<span style={{ color: theme.ink, textTransform: 'none', letterSpacing: 0 }}>{ACCENT_PRESETS[settings.accent ?? 'ink']?.label}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {Object.entries(ACCENT_PRESETS).map(([key, preset]) => {
+                        const col = settings.theme === 'dark' ? preset.dark.base : preset.light.base;
+                        const isSel = (settings.accent ?? 'ink') === key;
+                        return (
+                          <button key={key} onClick={() => updateSetting('accent', key)} title={preset.label} style={{
+                            appearance: 'none', border: `3px solid ${isSel ? col : 'transparent'}`,
+                            cursor: 'pointer', width: 34, height: 34, borderRadius: '50%',
+                            background: col, padding: 0, outline: isSel ? `2.5px solid ${theme.surface}` : 'none',
+                            outlineOffset: -5, transition: 'outline .12s ease',
+                          }} />
+                        );
+                      })}
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>字體大小&nbsp;<span style={{ color: theme.ink }}>{settings.fontSize}px</span></div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontFamily: F.serif, fontSize: 13, color: theme.muted }}>A</span>
-                      <input type="range" min="13" max="28" step="1" value={settings.fontSize} onChange={e => updateSetting('fontSize', parseInt(e.target.value))} style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }} />
-                      <span style={{ fontFamily: F.serif, fontSize: 20, color: theme.muted }}>A</span>
+                      <span style={{ fontFamily: F.serif, fontSize: 12, color: theme.muted }}>A</span>
+                      <input type="range" min="12" max="32" step="1" value={settings.fontSize} onChange={e => updateSetting('fontSize', parseInt(e.target.value))} style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: F.serif, fontSize: 22, color: theme.muted }}>A</span>
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
@@ -1061,6 +1101,12 @@ const App: React.FC = () => {
                       <button onClick={handleImportProgress} style={{ width: '100%', marginTop: 8, appearance: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', borderRadius: 10, background: A.base, color: '#fff', fontFamily: F.label, fontSize: 13, fontWeight: 600 }}>確認匯入</button>
                     </div>
                   )}
+
+                  <div style={{ height: 1, background: theme.line, margin: '14px 0 10px' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4 }}>
+                    <span style={{ fontFamily: F.label, fontSize: 11, color: theme.faint }}>版本資訊</span>
+                    <span style={{ fontFamily: 'ui-monospace,monospace', fontSize: 11, color: theme.muted }}>{appVersion}</span>
+                  </div>
                 </div>
               </div>
             </>
@@ -1438,6 +1484,15 @@ const App: React.FC = () => {
               </button>
             </div>
 
+            {/* Theme cycle button */}
+            <button
+              onClick={() => { const order: Theme[] = ['light', 'sepia', 'dark']; updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]); }}
+              title="切換外觀"
+              style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, background: 'transparent', color: theme.inkSoft, transition: 'background .12s ease' }}
+            >
+              {settings.theme === 'dark' ? <Moon size={16} /> : settings.theme === 'sepia' ? <Coffee size={16} /> : <Sun size={16} />}
+            </button>
+
             {/* Settings gear */}
             <div ref={settingsRef} style={{ position: 'relative' }}>
               <button
@@ -1459,28 +1514,26 @@ const App: React.FC = () => {
                   background: theme.surface, border: `1px solid ${theme.lineStrong}`,
                   boxShadow: '0 16px 48px rgba(0,0,0,0.14)', zIndex: 60,
                 }}>
-                  {/* Theme */}
+                  {/* Accent color */}
                   <div style={{ padding: '6px 8px 10px' }}>
                     <div style={{
                       fontFamily: F.label, fontSize: 9, fontWeight: 600,
                       letterSpacing: '0.16em', textTransform: 'uppercase',
                       color: theme.muted, marginBottom: 8,
-                    }}>外觀</div>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {([['light', <Sun size={11} />, '亮'], ['sepia', <Coffee size={11} />, '紙'], ['dark', <Moon size={11} />, '暗']] as const).map(([th, icon, label]) => (
-                        <button key={th} onClick={() => updateSetting('theme', th as Theme)} style={{
-                          flex: 1, appearance: 'none', cursor: 'pointer',
-                          padding: '6px 0', borderRadius: 6,
-                          border: `1.5px solid ${settings.theme === th ? A.base : theme.line}`,
-                          background: settings.theme === th ? A.tint : 'transparent',
-                          color: settings.theme === th ? A.base : theme.muted,
-                          fontFamily: F.label, fontSize: 11, fontWeight: 600,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-                          transition: 'all .12s ease',
-                        }}>
-                          {icon}{label}
-                        </button>
-                      ))}
+                    }}>配色&nbsp;<span style={{ color: theme.ink, textTransform: 'none', letterSpacing: 0 }}>{ACCENT_PRESETS[settings.accent ?? 'ink']?.label}</span></div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {Object.entries(ACCENT_PRESETS).map(([key, preset]) => {
+                        const col = settings.theme === 'dark' ? preset.dark.base : preset.light.base;
+                        const isSel = (settings.accent ?? 'ink') === key;
+                        return (
+                          <button key={key} onClick={() => updateSetting('accent', key)} title={preset.label} style={{
+                            appearance: 'none', border: `2.5px solid ${isSel ? col : 'transparent'}`,
+                            cursor: 'pointer', width: 28, height: 28, borderRadius: '50%',
+                            background: col, padding: 0, outline: isSel ? `2px solid ${theme.surface}` : 'none',
+                            outlineOffset: -4, transition: 'outline .12s ease',
+                          }} />
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1497,14 +1550,14 @@ const App: React.FC = () => {
                       <span style={{ color: theme.ink, fontVariantNumeric: 'tabular-nums' }}>{settings.fontSize}px</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontFamily: F.serif, fontSize: 13, color: theme.muted }}>A</span>
+                      <span style={{ fontFamily: F.serif, fontSize: 12, color: theme.muted }}>A</span>
                       <input
-                        type="range" min="13" max="28" step="1"
+                        type="range" min="12" max="32" step="1"
                         value={settings.fontSize}
                         onChange={e => updateSetting('fontSize', parseInt(e.target.value))}
                         style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }}
                       />
-                      <span style={{ fontFamily: F.serif, fontSize: 20, color: theme.muted }}>A</span>
+                      <span style={{ fontFamily: F.serif, fontSize: 22, color: theme.muted }}>A</span>
                     </div>
                   </div>
 
@@ -1574,6 +1627,12 @@ const App: React.FC = () => {
                       }}>確認匯入</button>
                     </div>
                   )}
+
+                  <div style={{ height: 1, background: theme.line, margin: '6px 6px 2px' }} />
+                  <div style={{ padding: '6px 12px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: F.label, fontSize: 10, color: theme.faint }}>版本</span>
+                    <span style={{ fontFamily: 'ui-monospace,monospace', fontSize: 10, color: theme.muted }}>{appVersion}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -1672,7 +1731,7 @@ const App: React.FC = () => {
                             fontVariantNumeric: 'tabular-nums',
                           }}>{v.verse}</span>
                           <div style={{ flex: 1, textAlign: 'justify' }}>
-                            <VerseText text={v.text} theme={settings.theme} />
+                            <VerseText text={v.text} theme={settings.theme} accent={A} />
                           </div>
                         </div>
                         {filteredParallel && (
@@ -1689,7 +1748,7 @@ const App: React.FC = () => {
                             }}>{filteredParallel[i]?.verse ?? v.verse}</span>
                             <div style={{ flex: 1, fontStyle: 'italic', color: theme.inkSoft, textAlign: 'justify' }}>
                               {filteredParallel[i]
-                                ? <VerseText text={filteredParallel[i].text} theme={settings.theme} />
+                                ? <VerseText text={filteredParallel[i].text} theme={settings.theme} accent={A} />
                                 : <span style={{ opacity: 0.3 }}>無對應內容</span>}
                             </div>
                           </div>
@@ -1703,6 +1762,7 @@ const App: React.FC = () => {
                     theme={settings.theme}
                     fontSize={settings.fontSize}
                     lineHeight={settings.lineHeight}
+                    accent={A}
                   />
                 )}
 
@@ -1737,7 +1797,7 @@ const App: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <button
                       onClick={() => mainScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-                      style={navBtn(false, theme)}
+                      style={navBtn(false, theme, A)}
                     ><ChevronUp size={13} /> 回頂</button>
 
                     {navStatus.inPlan ? (
@@ -1745,17 +1805,17 @@ const App: React.FC = () => {
                         {navStatus.prevItem && (
                           <button
                             onClick={() => fetchBible({ book: (navStatus.prevItem as ScheduleItem).book, chapter: (navStatus.prevItem as ScheduleItem).chapter, startVerse: (navStatus.prevItem as ScheduleItem).startVerse, endVerse: (navStatus.prevItem as ScheduleItem).endVerse, label: (navStatus.prevItem as ScheduleItem).label, scheduleItemId: (navStatus.prevItem as ScheduleItem).id })}
-                            style={navBtn(false, theme)}
+                            style={navBtn(false, theme, A)}
                           ><ChevronLeft size={13} /> {(navStatus.prevItem as ScheduleItem).label}</button>
                         )}
                         {navStatus.nextItem && (
                           <button
                             onClick={() => fetchBible({ book: (navStatus.nextItem as ScheduleItem).book, chapter: (navStatus.nextItem as ScheduleItem).chapter, startVerse: (navStatus.nextItem as ScheduleItem).startVerse, endVerse: (navStatus.nextItem as ScheduleItem).endVerse, label: (navStatus.nextItem as ScheduleItem).label, scheduleItemId: (navStatus.nextItem as ScheduleItem).id })}
-                            style={navBtn(true, theme)}
+                            style={navBtn(true, theme, A)}
                           >繼續：{(navStatus.nextItem as ScheduleItem).label} <ChevronRight size={13} /></button>
                         )}
                         {!navStatus.nextItem && nextDayWithPlan && (
-                          <button onClick={goToNextDay} style={navBtn(true, theme)}>
+                          <button onClick={goToNextDay} style={navBtn(true, theme, A)}>
                             前往下一天 <CalendarDays size={13} />
                           </button>
                         )}
@@ -1764,11 +1824,11 @@ const App: React.FC = () => {
                       <>
                         <button
                           onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })}
-                          style={navBtn(false, theme)}
+                          style={navBtn(false, theme, A)}
                         ><ChevronLeft size={13} /> 上一章</button>
                         <button
                           onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })}
-                          style={navBtn(true, theme)}
+                          style={navBtn(true, theme, A)}
                         >下一章 <ChevronRight size={13} /></button>
                       </>
                     )}

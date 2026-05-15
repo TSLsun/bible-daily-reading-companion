@@ -24,6 +24,7 @@ export interface AppSettings {
   fontSize: number;
   lineHeight: number;
   theme: Theme;
+  accent: string;
   primaryVersion: string;
   secondaryVersion: string | null;
   scheduleHash: string;
