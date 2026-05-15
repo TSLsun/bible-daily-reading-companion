@@ -313,6 +313,7 @@ const App: React.FC = () => {
   const [showImportField, setShowImportField] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [mobileSheet, setMobileSheet] = useState<'plan' | 'menu' | 'search' | null>(null);
+  const [settingsInitialized, setSettingsInitialized] = useState(false);
 
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -375,6 +376,7 @@ const App: React.FC = () => {
         console.error('Failed to load settings');
       }
     }
+    setSettingsInitialized(true);
   }, []);
 
   useEffect(() => {
@@ -393,6 +395,22 @@ const App: React.FC = () => {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Auto-open today's first unfinished reading on page load.
+  // Fires once after settings are loaded from localStorage (or immediately
+  // for first-time visitors using default settings).
+  useEffect(() => {
+    if (!settingsInitialized) return;
+    if (settings.scheduleMode !== 'daily') return;
+    const now = new Date();
+    if (now.getFullYear() !== PLAN_YEAR) return;
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const plan = getDayPlan(today, settings.dailyScheduleJson);
+    if (!plan.length) return;
+    const target = plan.find((item: ScheduleItem) => !settings.completedTasks.includes(item.id)) ?? plan[0];
+    fetchBible({ book: target.book, chapter: target.chapter, startVerse: target.startVerse, endVerse: target.endVerse, label: target.label, scheduleItemId: target.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsInitialized]);
 
   // ── Callbacks ──────────────────────────────────────────────────────────────
 
