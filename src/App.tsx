@@ -274,6 +274,8 @@ const App: React.FC = () => {
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(true);
   const [currentScheduleItemId, setCurrentScheduleItemId] = useState<string | null>(null);
   const [showImportField, setShowImportField] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [mobileSheet, setMobileSheet] = useState<'plan' | 'menu' | 'search' | null>(null);
 
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -348,6 +350,12 @@ const App: React.FC = () => {
     document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [settingsOpen]);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   // ── Callbacks ──────────────────────────────────────────────────────────────
 
@@ -658,10 +666,356 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {isMobile ? (
+        /* ─── MOBILE LAYOUT ──────────────────────────────────────────────── */
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+
+          {/* Mobile top bar */}
+          <div style={{
+            padding: '8px 18px 10px', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: `1px solid ${theme.line}`,
+          }}>
+            <button
+              onClick={() => setMobileSheet(s => s === 'plan' ? null : 'plan')}
+              style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-label="計劃"
+            ><CalendarDays size={19} /></button>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted }}>
+                {selectedDate.slice(5).replace('-', '月')}日
+              </div>
+              <div style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, marginTop: 2, letterSpacing: '-0.01em' }}>
+                2026 每日讀經
+              </div>
+            </div>
+            <button
+              onClick={() => setMobileSheet(s => s === 'menu' ? null : 'menu')}
+              style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              aria-label="設定"
+            ><Settings size={19} /></button>
+          </div>
+
+          {/* Mobile reading area */}
+          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 130px' }}>
+            {loading ? (
+              <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+                <BookOpen size={40} style={{ color: A.base, opacity: 0.25 }} />
+                <p style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.3em', textTransform: 'uppercase', color: theme.muted }}>正在開啟聖經卷軸</p>
+              </div>
+            ) : error ? (
+              <div style={{ margin: '8px 0', padding: 16, borderRadius: 12, background: 'rgba(225,29,72,0.07)', border: '1px solid rgba(225,29,72,0.18)', color: '#e11d48', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 1 }} />
+                <p style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, margin: 0 }}>{error}</p>
+              </div>
+            ) : bibleData ? (
+              <>
+                {/* Reference header */}
+                <div style={{ marginBottom: 22 }}>
+                  <div style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>
+                    {settings.scheduleMode === 'daily' && navStatus.inPlan ? `今日讀經 · ${selectedDate.slice(5).replace('-', '月')}日` : '自由閱讀'}
+                  </div>
+                  <h1 style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', margin: 0, color: theme.ink, lineHeight: 1.15 }}>
+                    {bibleData.reference}
+                  </h1>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        onClick={() => setShowVersionPicker({ active: true, target: 'primary' })}
+                        style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: A.tint, color: A.base, appearance: 'none', border: 'none', cursor: 'pointer' }}
+                      >{settings.primaryVersion}</button>
+                      <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>{filteredVerses.length} 節</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: 2, borderRadius: 8, background: theme.pill }}>
+                      <button onClick={() => setReadingMode('standard')} title="標準閱讀" style={modeBtn(readingMode === 'standard', theme)}><List size={13} /></button>
+                      <button onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) updateSetting('secondaryVersion', null); }} title="書頁模式" style={modeBtn(readingMode === 'book', theme)}><BookOpen size={13} /></button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Verses */}
+                {readingMode === 'standard' ? (
+                  <div style={{ display: 'grid', rowGap: Math.max(10, Math.round(settings.lineHeight * 14) - 4), fontFamily: F.serif, fontSize: Math.max(15, settings.fontSize - 2), lineHeight: settings.lineHeight, color: theme.ink }}>
+                    {filteredVerses.map((v, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                        <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
+                        <div style={{ flex: 1, textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} /></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} />
+                )}
+
+                {/* Completion + nav footer */}
+                <div style={{ marginTop: 40, paddingTop: 24, borderTop: `1px solid ${theme.line}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+                  {navStatus.inPlan && (
+                    <button onClick={markCurrentAsRead} style={{
+                      appearance: 'none', border: 'none', cursor: 'pointer',
+                      width: '100%', padding: '14px', borderRadius: 12,
+                      background: (navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId)) ? theme.success : A.base,
+                      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      fontFamily: F.sans, fontSize: 15, fontWeight: 600,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.10)', transition: 'background .2s ease',
+                    }}>
+                      {(navStatus.currentItemId && settings.completedTasks.includes(navStatus.currentItemId))
+                        ? <><CheckCircle2 size={18} /> 已完成 · {bibleData.reference}</>
+                        : <><PartyPopper size={18} /> 讀完了</>}
+                    </button>
+                  )}
+                  <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                    {navStatus.inPlan ? (
+                      <>
+                        {navStatus.prevItem && (
+                          <button onClick={() => fetchBible({ book: (navStatus.prevItem as ScheduleItem).book, chapter: (navStatus.prevItem as ScheduleItem).chapter, startVerse: (navStatus.prevItem as ScheduleItem).startVerse, endVerse: (navStatus.prevItem as ScheduleItem).endVerse, label: (navStatus.prevItem as ScheduleItem).label, scheduleItemId: (navStatus.prevItem as ScheduleItem).id })}
+                            style={{ flex: 1, appearance: 'none', border: `1px solid ${theme.line}`, cursor: 'pointer', background: 'transparent', color: theme.inkSoft, padding: '10px 14px', borderRadius: 10, fontFamily: F.sans, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            <ChevronLeft size={14} /> {(navStatus.prevItem as ScheduleItem).label}
+                          </button>
+                        )}
+                        {navStatus.nextItem && (
+                          <button onClick={() => fetchBible({ book: (navStatus.nextItem as ScheduleItem).book, chapter: (navStatus.nextItem as ScheduleItem).chapter, startVerse: (navStatus.nextItem as ScheduleItem).startVerse, endVerse: (navStatus.nextItem as ScheduleItem).endVerse, label: (navStatus.nextItem as ScheduleItem).label, scheduleItemId: (navStatus.nextItem as ScheduleItem).id })}
+                            style={{ flex: 1, appearance: 'none', border: 'none', cursor: 'pointer', background: A.tint, color: A.base, padding: '10px 14px', borderRadius: 10, fontFamily: F.sans, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            {(navStatus.nextItem as ScheduleItem).label} <ChevronRight size={14} />
+                          </button>
+                        )}
+                        {!navStatus.nextItem && nextDayWithPlan && (
+                          <button onClick={goToNextDay} style={{ flex: 1, appearance: 'none', border: 'none', cursor: 'pointer', background: A.tint, color: A.base, padding: '10px 14px', borderRadius: 10, fontFamily: F.sans, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            前往下一天 <CalendarDays size={13} />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: Math.max(1, bibleData.chapter - 1) })}
+                          style={{ flex: 1, appearance: 'none', border: `1px solid ${theme.line}`, cursor: 'pointer', background: 'transparent', color: theme.inkSoft, padding: '10px 14px', borderRadius: 10, fontFamily: F.sans, fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          <ChevronLeft size={14} /> 上一章
+                        </button>
+                        <button onClick={() => fetchBible({ book: bibleData.bookCode, chapter: bibleData.chapter + 1 })}
+                          style={{ flex: 1, appearance: 'none', border: 'none', cursor: 'pointer', background: A.tint, color: A.base, padding: '10px 14px', borderRadius: 10, fontFamily: F.sans, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                          下一章 <ChevronRight size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+                <BookOpen size={44} style={{ color: A.base, opacity: 0.18 }} />
+                <h3 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 600, color: theme.ink, opacity: 0.35, margin: 0, textAlign: 'center' }}>靈修從此刻開始</h3>
+                <p style={{ fontFamily: F.sans, fontSize: 13, color: theme.muted, textAlign: 'center', maxWidth: 260, lineHeight: 1.65, margin: 0 }}>
+                  點選下方「計劃」查看日曆，<br />或點選「搜尋」查閱章節。
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Floating bottom tab bar */}
+          <div style={{
+            position: 'absolute', left: 14, right: 14, bottom: 34,
+            padding: '10px 12px', borderRadius: 18,
+            background: settings.theme === 'dark' ? 'rgba(45,42,34,0.90)' : settings.theme === 'sepia' ? 'rgba(246,239,222,0.90)' : 'rgba(250,250,247,0.90)',
+            backdropFilter: 'blur(20px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+            border: `1px solid ${theme.lineStrong}`,
+            boxShadow: '0 12px 30px rgba(0,0,0,0.10)',
+            display: 'flex', alignItems: 'center', gap: 4, zIndex: 30,
+          }}>
+            {([
+              { label: '今日', icon: <Target size={19} strokeWidth={1.8} />, sheet: null as null },
+              { label: '計劃', icon: <CalendarDays size={19} strokeWidth={1.8} />, sheet: 'plan' as const },
+              { label: '搜尋', icon: <Search size={19} strokeWidth={1.8} />, sheet: 'search' as const },
+              { label: '設定', icon: <Settings size={19} strokeWidth={1.8} />, sheet: 'menu' as const },
+            ] as const).map(tab => {
+              const active = mobileSheet === tab.sheet;
+              return (
+                <button key={tab.label} onClick={() => setMobileSheet(s => s === tab.sheet ? null : tab.sheet)} style={{
+                  flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+                  background: active ? A.base : 'transparent',
+                  color: active ? '#fff' : theme.inkSoft,
+                  padding: '8px 4px', borderRadius: 12,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
+                  transition: 'all .12s ease',
+                }}>
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom sheet (plan) */}
+          {mobileSheet === 'plan' && (
+            <>
+              <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '80%', background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, display: 'flex', flexDirection: 'column', paddingBottom: 24 }}>
+                <div style={{ padding: '10px 0 6px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
+                </div>
+                <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>本月日曆 · 今日計劃</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
+                  {/* Mobile calendar */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronLeft size={14} /></button>
+                      <span style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink }}>{currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月</span>
+                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronRight size={14} /></button>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+                      {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+                        <div key={d} style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: theme.faint, textAlign: 'center', padding: 4 }}>{d}</div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
+                      {calendarDays.map((d, idx) => {
+                        if (!d) return <div key={`me${idx}`} style={{ aspectRatio: '1' }} />;
+                        const isSel = d.dateKey === selectedDate;
+                        const isToday = d.dateKey === todayStr;
+                        return (
+                          <button key={d.dateKey} onClick={() => { handleDayClick(d.dateKey); setMobileSheet(null); }} style={{
+                            appearance: 'none', border: 'none', cursor: 'pointer',
+                            aspectRatio: '1', borderRadius: 8,
+                            background: isSel ? A.base : 'transparent',
+                            color: isSel ? '#fff' : !d.hasPlan ? theme.faint : theme.ink,
+                            fontFamily: F.label, fontSize: 12, fontWeight: 500, position: 'relative',
+                            boxShadow: isToday && !isSel ? `inset 0 0 0 1.5px ${A.base}` : 'none',
+                            opacity: !d.hasPlan && !isSel ? 0.28 : 1,
+                          }}>
+                            {d.day}
+                            {d.hasPlan && (
+                              <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint }} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: theme.line, margin: '16px 0' }} />
+                  <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 8 }}>今日章節</div>
+                  {parsedSchedule.length > 0 ? (parsedSchedule as ScheduleItem[]).map(item => {
+                    const done = settings.completedTasks.includes(item.id);
+                    const isCurr = navStatus.currentItemId === item.id || (bibleData && !navStatus.currentItemId && bibleData.bookCode === item.book && bibleData.chapter === item.chapter);
+                    return (
+                      <div key={item.id} onClick={() => { fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id }); setMobileSheet(null); }} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 10px', borderRadius: 10, background: isCurr ? A.tint : 'transparent', marginBottom: 4, cursor: 'pointer' }}>
+                        <button onClick={e => { e.stopPropagation(); toggleTask(item.id); }} style={{ appearance: 'none', cursor: 'pointer', border: `1.5px solid ${done ? theme.success : theme.faint}`, background: done ? theme.success : 'transparent', width: 18, height: 18, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, transition: 'all .12s ease' }}>
+                          {done && <CheckCircle2 size={11} />}
+                        </button>
+                        <span style={{ flex: 1, fontFamily: F.sans, fontSize: 14, fontWeight: isCurr ? 600 : 500, color: done ? theme.muted : theme.ink, textDecoration: done ? 'line-through' : 'none', textDecorationColor: theme.faint }}>{item.label}</span>
+                        {isCurr && <span style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, color: A.base, letterSpacing: '0.1em' }}>讀</span>}
+                      </div>
+                    );
+                  }) : (
+                    <div style={{ padding: '14px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint, border: `1px dashed ${theme.line}`, borderRadius: 8 }}>本日無指定內容</div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Bottom sheet (search) */}
+          {mobileSheet === 'search' && (
+            <>
+              <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, padding: '10px 0 32px' }}>
+                <div style={{ padding: '0 0 8px', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
+                </div>
+                <div style={{ padding: '4px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>搜尋章節</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                </div>
+                <div style={{ padding: '0 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: theme.pill }}>
+                    <Search size={16} style={{ color: theme.muted, flexShrink: 0 }} />
+                    <input
+                      autoFocus
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') { fetchBible(); setMobileSheet(null); } }}
+                      placeholder="如：詩 23、太 5"
+                      style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 15, flex: 1, minWidth: 0 }}
+                    />
+                  </div>
+                  <button onClick={() => { fetchBible(); setMobileSheet(null); }} style={{ width: '100%', marginTop: 12, appearance: 'none', border: 'none', cursor: 'pointer', padding: '13px', borderRadius: 12, background: A.base, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 600 }}>
+                    開啟
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Bottom sheet (menu/settings) */}
+          {mobileSheet === 'menu' && (
+            <>
+              <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '82%', background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, display: 'flex', flexDirection: 'column', paddingBottom: 28 }}>
+                <div style={{ padding: '10px 0 6px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
+                </div>
+                <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>設定</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>外觀</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {([['light', <Sun size={13} />, '亮'], ['sepia', <Coffee size={13} />, '紙感'], ['dark', <Moon size={13} />, '深夜']] as const).map(([th, icon, label]) => (
+                        <button key={th} onClick={() => updateSetting('theme', th as Theme)} style={{ flex: 1, appearance: 'none', cursor: 'pointer', padding: '10px 0', borderRadius: 10, border: `1.5px solid ${settings.theme === th ? A.base : theme.line}`, background: settings.theme === th ? A.tint : 'transparent', color: settings.theme === th ? A.base : theme.muted, fontFamily: F.label, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>{icon}{label}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>字體大小&nbsp;<span style={{ color: theme.ink }}>{settings.fontSize}px</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: F.serif, fontSize: 13, color: theme.muted }}>A</span>
+                      <input type="range" min="13" max="28" step="1" value={settings.fontSize} onChange={e => updateSetting('fontSize', parseInt(e.target.value))} style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: F.serif, fontSize: 20, color: theme.muted }}>A</span>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>行間距</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 4 }}>
+                      {[1.4, 1.55, 1.75, 1.9, 2.1].map(lh => (
+                        <button key={lh} onClick={() => updateSetting('lineHeight', lh)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: '9px 0', borderRadius: 8, background: settings.lineHeight === lh ? A.base : theme.pill, color: settings.lineHeight === lh ? '#fff' : theme.muted, fontFamily: F.label, fontSize: 10, fontWeight: 600 }}>{lh}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ height: 1, background: theme.line, margin: '8px 0 14px' }} />
+                  {([
+                    { icon: <Type size={15} />, label: '編輯讀經計劃', sub: '進階設定', action: () => { setIsEditingSchedule(true); setMobileSheet(null); } },
+                    { icon: <Download size={15} />, label: '匯出進度', sub: '備份', action: () => { handleExportProgress(); setMobileSheet(null); } },
+                    { icon: <Upload size={15} />, label: '匯入進度', sub: '還原', action: () => setShowImportField(f => !f) },
+                  ]).map((row, i, arr) => (
+                    <div key={i} onClick={row.action} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 6px', borderBottom: i < arr.length - 1 ? `1px solid ${theme.line}` : 'none', cursor: 'pointer' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: 9, background: theme.pill, color: theme.inkSoft, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{row.icon}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: theme.ink, fontFamily: F.sans }}>{row.label}</div>
+                        <div style={{ fontSize: 11, color: theme.muted, fontFamily: F.label, marginTop: 1 }}>{row.sub}</div>
+                      </div>
+                      <ChevronRight size={14} style={{ color: theme.faint }} />
+                    </div>
+                  ))}
+                  {showImportField && (
+                    <div style={{ padding: '12px 0 0' }}>
+                      <input type="text" placeholder="在此貼上進度代碼…" value={migrationInput} onChange={e => setMigrationInput(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${theme.lineStrong}`, background: theme.bg, color: theme.ink, fontFamily: 'ui-monospace, monospace', fontSize: 11, outline: 'none', boxSizing: 'border-box' as const }} />
+                      <button onClick={handleImportProgress} style={{ width: '100%', marginTop: 8, appearance: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', borderRadius: 10, background: A.base, color: '#fff', fontFamily: F.label, fontSize: 13, fontWeight: 600 }}>確認匯入</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* ─── LEFT RAIL ──────────────────────────────────────────────── */}
         <aside style={{
-          width: railOpen ? 272 : 52,
+          width: railOpen ? 320 : 52,
           flexShrink: 0,
           borderRight: `1px solid ${theme.line}`,
           display: 'flex',
@@ -726,7 +1080,7 @@ const App: React.FC = () => {
           {railOpen && (
             <div style={{
               flex: 1, overflowY: 'auto',
-              padding: '0 12px 20px',
+              padding: '0 16px 20px',
               display: 'flex', flexDirection: 'column', gap: 16,
             }}>
               {/* CALENDAR */}
@@ -736,8 +1090,8 @@ const App: React.FC = () => {
                   padding: '4px 4px', marginBottom: 6,
                 }}>
                   <span style={{
-                    fontFamily: F.label, fontSize: 9, fontWeight: 600,
-                    letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted,
+                    fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                    letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted,
                   }}>日曆</span>
                   <div style={{ display: 'flex', gap: 2 }}>
                     <button
@@ -752,7 +1106,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div style={{
-                  fontFamily: F.label, fontSize: 10, fontWeight: 500,
+                  fontFamily: F.serif, fontSize: 13, fontWeight: 600,
                   color: theme.inkSoft, textAlign: 'center', marginBottom: 6,
                 }}>
                   {currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月
@@ -762,7 +1116,7 @@ const App: React.FC = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 1, marginBottom: 3 }}>
                   {['日', '一', '二', '三', '四', '五', '六'].map(d => (
                     <div key={d} style={{
-                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      fontFamily: F.label, fontSize: 10, fontWeight: 600,
                       color: theme.faint, textAlign: 'center', padding: '2px 0',
                     }}>{d}</div>
                   ))}
@@ -777,11 +1131,11 @@ const App: React.FC = () => {
                     return (
                       <button key={d.dateKey} onClick={() => handleDayClick(d.dateKey)} style={{
                         appearance: 'none', border: 'none', cursor: 'pointer',
-                        aspectRatio: '1', minHeight: 26,
-                        borderRadius: 5,
+                        aspectRatio: '1', minHeight: 30,
+                        borderRadius: 6,
                         background: isSel ? A.base : 'transparent',
                         color: isSel ? '#fff' : !d.hasPlan ? theme.faint : theme.ink,
-                        fontFamily: F.label, fontSize: 11, fontWeight: 500,
+                        fontFamily: F.label, fontSize: 12, fontWeight: 500,
                         display: 'flex', flexDirection: 'column', alignItems: 'center',
                         justifyContent: 'center', position: 'relative',
                         boxShadow: isToday && !isSel ? `inset 0 0 0 1.5px ${A.base}` : 'none',
@@ -821,8 +1175,8 @@ const App: React.FC = () => {
                     }}
                   >
                     <span style={{
-                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
-                      letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted,
+                      fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.10em', textTransform: 'uppercase', color: theme.muted,
                     }}>
                       {selectedDate.slice(5).replace('-', '月')}日
                     </span>
@@ -879,7 +1233,7 @@ const App: React.FC = () => {
                             {done && <CheckCircle2 size={9} />}
                           </button>
                           <span style={{
-                            fontFamily: F.sans, fontSize: 13, fontWeight: isCurr ? 600 : 500,
+                            fontFamily: F.sans, fontSize: 14, fontWeight: isCurr ? 600 : 500,
                             color: done ? theme.muted : theme.ink,
                             textDecoration: done ? 'line-through' : 'none',
                             textDecorationColor: theme.faint,
@@ -912,11 +1266,11 @@ const App: React.FC = () => {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
                     <span style={{
-                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
-                      letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
+                      fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.10em', textTransform: 'uppercase', color: theme.muted,
                     }}>年度進度</span>
                     <span style={{
-                      fontFamily: F.label, fontSize: 11, fontWeight: 600,
+                      fontFamily: F.label, fontSize: 13, fontWeight: 600,
                       color: theme.ink, fontVariantNumeric: 'tabular-nums',
                     }}>{yearProgress.completed} / {yearProgress.total}</span>
                   </div>
@@ -1194,8 +1548,8 @@ const App: React.FC = () => {
               </div>
             ) : bibleData ? (
               <div style={{
-                maxWidth: 720, margin: '0 auto',
-                padding: `48px ${Math.max(24, settings.fontSize * 1.8)}px 80px`,
+                maxWidth: 860, margin: '0 auto',
+                padding: `48px ${Math.max(32, settings.fontSize * 1.8)}px 80px`,
               }}>
                 {/* Reference header */}
                 <div style={{ marginBottom: 32 }}>
@@ -1415,6 +1769,7 @@ const App: React.FC = () => {
           </div>
         </main>
       </div>
+      )}
 
       {/* ─── SCHEDULE EDIT DRAWER ──────────────────────────────────────── */}
       {isEditingSchedule && (
