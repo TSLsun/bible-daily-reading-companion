@@ -105,13 +105,13 @@ function modeBtn(active: boolean, t: TK): React.CSSProperties {
   };
 }
 
-function navBtn(accent: boolean, t: TK, a: AccentTone = A_DEFAULT): React.CSSProperties {
+function navBtn(filled: boolean, t: TK, accent: AccentTone = A_DEFAULT): React.CSSProperties {
   return {
     appearance: 'none', cursor: 'pointer',
     padding: '10px 18px', borderRadius: 8,
-    border: accent ? 'none' : `1px solid ${t.line}`,
-    background: accent ? a.tint : 'transparent',
-    color: accent ? a.base : t.inkSoft,
+    border: filled ? 'none' : `1px solid ${t.line}`,
+    background: filled ? accent.tint : 'transparent',
+    color: filled ? accent.base : t.inkSoft,
     fontFamily: F.sans, fontSize: 13, fontWeight: 500,
     display: 'inline-flex', alignItems: 'center', gap: 6,
     letterSpacing: '0.01em',
@@ -259,7 +259,6 @@ const BookPageVerses: React.FC<{
           );
         }
 
-        // Verse run — apply drop-cap only to the very first run
         const applyDropCap = si === firstRunIdx;
         const first = seg.items[0];
         const rest = seg.items.slice(1);
@@ -292,6 +291,30 @@ const BookPageVerses: React.FC<{
     </div>
   );
 };
+
+// ─── ACCENT SWATCHES ─────────────────────────────────────────────────────────
+
+const AccentSwatches: React.FC<{
+  current: string; theme: Theme; size?: number; gap?: number;
+  onChange: (key: string) => void;
+}> = ({ current, theme, size = 28, gap = 8, onChange }) => (
+  <div style={{ display: 'flex', gap }}>
+    {Object.entries(ACCENT_PRESETS).map(([key, preset]) => {
+      const col = theme === 'dark' ? preset.dark.base : preset.light.base;
+      const isSel = current === key;
+      return (
+        <button key={key} onClick={() => onChange(key)} title={preset.label} style={{
+          appearance: 'none', cursor: 'pointer', padding: 0,
+          width: size, height: size, borderRadius: '50%', background: col,
+          border: `${size <= 28 ? 2.5 : 3}px solid ${isSel ? col : 'transparent'}`,
+          outline: isSel ? `2px solid ${theme === 'dark' ? '#252219' : theme === 'sepia' ? '#fbf5e6' : '#ffffff'}` : 'none',
+          outlineOffset: -Math.round(size * 0.14),
+          transition: 'outline .12s ease',
+        }} />
+      );
+    })}
+  </div>
+);
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
@@ -443,6 +466,12 @@ const App: React.FC = () => {
     saveSettings(updated);
     return updated;
   };
+
+  const cycleTheme = useCallback(() => {
+    const order: Theme[] = ['light', 'sepia', 'dark'];
+    updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.theme]);
 
   const showToast = (message: string, type = 'success') => {
     setToast({ show: true, message, type });
@@ -707,10 +736,10 @@ const App: React.FC = () => {
   const A = getAccent(settings.accent ?? 'ink', settings.theme);
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v1.0.0-dev';
 
-  const todayStr = (() => {
+  const todayStr = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  })();
+  }, []);
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -769,7 +798,7 @@ const App: React.FC = () => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <button
-                onClick={() => { const order: Theme[] = ['light', 'sepia', 'dark']; updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]); }}
+                onClick={cycleTheme}
                 style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 aria-label="切換外觀"
               >
@@ -908,40 +937,25 @@ const App: React.FC = () => {
             boxShadow: '0 12px 30px rgba(0,0,0,0.10)',
             display: 'flex', alignItems: 'center', gap: 4, zIndex: 30,
           }}>
-            {/* 今日 — action button, not a sheet toggle */}
-            <button onClick={() => { setMobileSheet(null); goToTodayInPlan(); }} style={{
-              flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
-              background: selectedDate === todayStr && settings.scheduleMode === 'daily' ? A.base : 'transparent',
-              color: selectedDate === todayStr && settings.scheduleMode === 'daily' ? '#fff' : theme.inkSoft,
-              padding: '8px 4px', borderRadius: 12,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-              fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
-              transition: 'all .12s ease',
-            }}>
-              <Target size={19} strokeWidth={1.8} />
-              <span>今日</span>
-            </button>
             {([
-              { label: '計劃', icon: <CalendarDays size={19} strokeWidth={1.8} />, sheet: 'plan' as const },
-              { label: '搜尋', icon: <Search size={19} strokeWidth={1.8} />, sheet: 'search' as const },
-              { label: '設定', icon: <Settings size={19} strokeWidth={1.8} />, sheet: 'menu' as const },
-            ] as const).map(tab => {
-              const active = mobileSheet === tab.sheet;
-              return (
-                <button key={tab.label} onClick={() => setMobileSheet(s => s === tab.sheet ? null : tab.sheet)} style={{
-                  flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
-                  background: active ? A.base : 'transparent',
-                  color: active ? '#fff' : theme.inkSoft,
-                  padding: '8px 4px', borderRadius: 12,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
-                  transition: 'all .12s ease',
-                }}>
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+              { label: '今日',  icon: <Target      size={19} strokeWidth={1.8} />, active: selectedDate === todayStr && settings.scheduleMode === 'daily', onClick: () => { setMobileSheet(null); goToTodayInPlan(); } },
+              { label: '計劃',  icon: <CalendarDays size={19} strokeWidth={1.8} />, active: mobileSheet === 'plan',   onClick: () => setMobileSheet(s => s === 'plan'   ? null : 'plan')   },
+              { label: '搜尋',  icon: <Search       size={19} strokeWidth={1.8} />, active: mobileSheet === 'search', onClick: () => setMobileSheet(s => s === 'search' ? null : 'search') },
+              { label: '設定',  icon: <Settings     size={19} strokeWidth={1.8} />, active: mobileSheet === 'menu',   onClick: () => setMobileSheet(s => s === 'menu'   ? null : 'menu')   },
+            ]).map(tab => (
+              <button key={tab.label} onClick={tab.onClick} style={{
+                flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+                background: tab.active ? A.base : 'transparent',
+                color: tab.active ? '#fff' : theme.inkSoft,
+                padding: '8px 4px', borderRadius: 12,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
+                transition: 'all .12s ease',
+              }}>
+                {tab.icon}
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Bottom sheet (plan) */}
@@ -985,9 +999,10 @@ const App: React.FC = () => {
                             opacity: !d.hasPlan && !isSel ? 0.28 : 1,
                           }}>
                             {d.day}
-                            {d.hasPlan && (
-                              <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint }} />
-                            )}
+                            {d.hasPlan && (() => {
+                              const dotColor = isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint;
+                              return <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: dotColor }} />;
+                            })()}
                           </button>
                         );
                       })}
@@ -1064,20 +1079,7 @@ const App: React.FC = () => {
                     <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>
                       配色&nbsp;<span style={{ color: theme.ink, textTransform: 'none', letterSpacing: 0 }}>{ACCENT_PRESETS[settings.accent ?? 'ink']?.label}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                      {Object.entries(ACCENT_PRESETS).map(([key, preset]) => {
-                        const col = settings.theme === 'dark' ? preset.dark.base : preset.light.base;
-                        const isSel = (settings.accent ?? 'ink') === key;
-                        return (
-                          <button key={key} onClick={() => updateSetting('accent', key)} title={preset.label} style={{
-                            appearance: 'none', border: `3px solid ${isSel ? col : 'transparent'}`,
-                            cursor: 'pointer', width: 34, height: 34, borderRadius: '50%',
-                            background: col, padding: 0, outline: isSel ? `2.5px solid ${theme.surface}` : 'none',
-                            outlineOffset: -5, transition: 'outline .12s ease',
-                          }} />
-                        );
-                      })}
-                    </div>
+                    <AccentSwatches current={settings.accent ?? 'ink'} theme={settings.theme} size={34} gap={10} onChange={key => updateSetting('accent', key)} />
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>字體大小&nbsp;<span style={{ color: theme.ink }}>{settings.fontSize}px</span></div>
@@ -1259,15 +1261,10 @@ const App: React.FC = () => {
                         transition: 'all .1s ease',
                       }}>
                         {d.day}
-                        {d.hasPlan && (
-                          <span style={{
-                            position: 'absolute', bottom: 2,
-                            width: 3, height: 3, borderRadius: '50%',
-                            background: isSel ? 'rgba(255,255,255,0.7)' :
-                              d.isFullyCompleted ? theme.success :
-                              d.progress > 0 ? A.soft : theme.faint,
-                          }} />
-                        )}
+                        {d.hasPlan && (() => {
+                          const dotColor = isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint;
+                          return <span style={{ position: 'absolute', bottom: 2, width: 3, height: 3, borderRadius: '50%', background: dotColor }} />;
+                        })()}
                       </button>
                     );
                   })}
@@ -1501,7 +1498,7 @@ const App: React.FC = () => {
 
             {/* Theme cycle button */}
             <button
-              onClick={() => { const order: Theme[] = ['light', 'sepia', 'dark']; updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]); }}
+              onClick={cycleTheme}
               title="切換外觀"
               style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: 8, borderRadius: 8, background: 'transparent', color: theme.inkSoft, transition: 'background .12s ease' }}
             >
@@ -1536,20 +1533,7 @@ const App: React.FC = () => {
                       letterSpacing: '0.16em', textTransform: 'uppercase',
                       color: theme.muted, marginBottom: 8,
                     }}>配色&nbsp;<span style={{ color: theme.ink, textTransform: 'none', letterSpacing: 0 }}>{ACCENT_PRESETS[settings.accent ?? 'ink']?.label}</span></div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {Object.entries(ACCENT_PRESETS).map(([key, preset]) => {
-                        const col = settings.theme === 'dark' ? preset.dark.base : preset.light.base;
-                        const isSel = (settings.accent ?? 'ink') === key;
-                        return (
-                          <button key={key} onClick={() => updateSetting('accent', key)} title={preset.label} style={{
-                            appearance: 'none', border: `2.5px solid ${isSel ? col : 'transparent'}`,
-                            cursor: 'pointer', width: 28, height: 28, borderRadius: '50%',
-                            background: col, padding: 0, outline: isSel ? `2px solid ${theme.surface}` : 'none',
-                            outlineOffset: -4, transition: 'outline .12s ease',
-                          }} />
-                        );
-                      })}
-                    </div>
+                    <AccentSwatches current={settings.accent ?? 'ink'} theme={settings.theme} size={28} gap={8} onChange={key => updateSetting('accent', key)} />
                   </div>
 
                   <div style={{ height: 1, background: theme.line, margin: '0 6px 6px' }} />
