@@ -751,11 +751,19 @@ const App: React.FC = () => {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             borderBottom: `1px solid ${theme.line}`,
           }}>
-            <button
-              onClick={() => setMobileSheet(s => s === 'plan' ? null : 'plan')}
-              style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              aria-label="計劃"
-            ><CalendarDays size={19} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <button
+                onClick={() => setMobileSheet(s => s === 'plan' ? null : 'plan')}
+                style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="計劃"
+              ><CalendarDays size={19} /></button>
+              <button
+                onClick={goToFirstUnfinished}
+                style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="補進度"
+                title="跳至最早未完成進度"
+              ><BookMarked size={19} /></button>
+            </div>
             <div style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, letterSpacing: '-0.01em' }}>
               2026 每日讀經
             </div>
