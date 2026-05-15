@@ -467,11 +467,10 @@ const App: React.FC = () => {
     return updated;
   };
 
-  const cycleTheme = useCallback(() => {
+  const cycleTheme = () => {
     const order: Theme[] = ['light', 'sepia', 'dark'];
     updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.theme]);
+  };
 
   const showToast = (message: string, type = 'success') => {
     setToast({ show: true, message, type });
