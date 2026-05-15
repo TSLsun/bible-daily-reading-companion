@@ -172,6 +172,20 @@ const VerseText: React.FC<{ text: string; theme: Theme }> = ({ text, theme }) =>
 
 // ─── BOOK PAGE VERSES ────────────────────────────────────────────────────────
 
+// Split leading h2/h3/subheading tags from verse text so drop-cap lands on
+// the first real character, not on a `<`.
+function splitLeadingHeaders(text: string): { headers: string[]; body: string } {
+  const re = /^(<(?:h2|h3|subheading)[^>]*>[\s\S]*?<\/(?:h2|h3|subheading)>)\s*/i;
+  const headers: string[] = [];
+  let rest = text;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(rest)) !== null) {
+    headers.push(m[1]);
+    rest = rest.slice(m[0].length);
+  }
+  return { headers, body: rest };
+}
+
 const BookPageVerses: React.FC<{
   verses: BibleVerse[];
   theme: Theme;
@@ -189,8 +203,28 @@ const BookPageVerses: React.FC<{
 
   if (!verses.length) return null;
 
-  const firstChar = verses[0].text[0] ?? '';
-  const firstRest = verses[0].text.slice(1);
+  // Build segments: alternate between header blocks and verse runs so that
+  // headers embedded inside verse text are rendered as block elements, not
+  // dropped into an inline <p> context.
+  type VerseEntry = { verse: number; text: string };
+  type Seg = { type: 'header'; html: string } | { type: 'run'; items: VerseEntry[] };
+
+  const segments: Seg[] = [];
+  let currentRun: VerseEntry[] = [];
+
+  for (const v of verses) {
+    const { headers, body } = splitLeadingHeaders(v.text);
+    if (headers.length > 0) {
+      if (currentRun.length > 0) { segments.push({ type: 'run', items: currentRun }); currentRun = []; }
+      for (const h of headers) segments.push({ type: 'header', html: h });
+      if (body.trim()) currentRun.push({ verse: v.verse, text: body });
+    } else {
+      currentRun.push({ verse: v.verse, text: v.text });
+    }
+  }
+  if (currentRun.length > 0) segments.push({ type: 'run', items: currentRun });
+
+  const firstRunIdx = segments.findIndex(s => s.type === 'run');
 
   return (
     <div style={{
@@ -198,42 +232,45 @@ const BookPageVerses: React.FC<{
       lineHeight: lineHeight + 0.05, color: t.ink,
       textAlign: 'justify', hyphens: 'auto',
     }}>
-      {/* Opening paragraph with drop cap */}
-      <p style={{ margin: '0 0 1.2em' }}>
-        <span style={{
-          float: 'left', fontFamily: F.serif,
-          fontSize: baseSize * 4, lineHeight: 0.88,
-          color: A.base, fontWeight: 600,
-          marginRight: 12, marginTop: 6, letterSpacing: '-0.02em',
-        }}>{firstChar}</span>
-        <sup style={sup}>1</sup>
-        <VerseText text={firstRest} theme={theme} />{' '}
-        {verses.slice(1, 3).map(v => (
-          <React.Fragment key={v.verse}>
-            <sup style={sup}>{v.verse}</sup>
-            <VerseText text={v.text} theme={theme} />{' '}
-          </React.Fragment>
-        ))}
-      </p>
+      {segments.map((seg, si) => {
+        if (seg.type === 'header') {
+          return (
+            <div key={si} style={{ marginBottom: '0.5em', marginTop: si > 0 ? '1em' : 0, clear: 'both' }}>
+              <VerseText text={seg.html} theme={theme} />
+            </div>
+          );
+        }
 
-      {/* Remaining verses as continuous text */}
-      {verses.length > 3 && (
-        <p style={{ margin: '0 0 1.2em', clear: 'both' }}>
-          {verses.slice(3).map((v, i) => (
-            <React.Fragment key={v.verse}>
-              {i > 0 && ' '}
-              <sup style={sup}>{v.verse}</sup>
-              <VerseText text={v.text} theme={theme} />
-            </React.Fragment>
-          ))}
-        </p>
-      )}
+        // Verse run — apply drop-cap only to the very first run
+        const applyDropCap = si === firstRunIdx;
+        const first = seg.items[0];
+        const rest = seg.items.slice(1);
+        const dropChar = applyDropCap ? (first.text[0] ?? '') : '';
+        const firstBody = applyDropCap ? first.text.slice(1) : first.text;
 
-      {/* End ornament */}
-      <div style={{
-        marginTop: 32, textAlign: 'center',
-        color: t.faint, fontSize: 20, clear: 'both',
-      }}>❦</div>
+        return (
+          <p key={si} style={{ margin: '0 0 1.2em', clear: si > 0 ? 'both' : undefined }}>
+            {applyDropCap && dropChar && (
+              <span style={{
+                float: 'left', fontFamily: F.serif,
+                fontSize: baseSize * 4, lineHeight: 0.88,
+                color: A.base, fontWeight: 600,
+                marginRight: 12, marginTop: 6, letterSpacing: '-0.02em',
+              }}>{dropChar}</span>
+            )}
+            <sup style={sup}>{first.verse}</sup>
+            <VerseText text={firstBody} theme={theme} />{' '}
+            {rest.map(v => (
+              <React.Fragment key={v.verse}>
+                <sup style={sup}>{v.verse}</sup>
+                <VerseText text={v.text} theme={theme} />{' '}
+              </React.Fragment>
+            ))}
+          </p>
+        );
+      })}
+
+      <div style={{ marginTop: 32, textAlign: 'center', color: t.faint, fontSize: 20, clear: 'both' }}>❦</div>
     </div>
   );
 };
