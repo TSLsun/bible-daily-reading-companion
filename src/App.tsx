@@ -756,13 +756,8 @@ const App: React.FC = () => {
               style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="計劃"
             ><CalendarDays size={19} /></button>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted }}>
-                {selectedDate.slice(5).replace('-', '月')}日
-              </div>
-              <div style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, marginTop: 2, letterSpacing: '-0.01em' }}>
-                2026 每日讀經
-              </div>
+            <div style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, letterSpacing: '-0.01em' }}>
+              2026 每日讀經
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <button
@@ -797,7 +792,7 @@ const App: React.FC = () => {
                 {/* Reference header */}
                 <div style={{ marginBottom: 22 }}>
                   <div style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>
-                    {settings.scheduleMode === 'daily' && navStatus.inPlan ? `今日讀經 · ${selectedDate.slice(5).replace('-', '月')}日` : '自由閱讀'}
+                    {settings.scheduleMode === 'daily' && navStatus.inPlan ? `讀經進度 · ${selectedDate.slice(5).replace('-', '月')}日` : '自由閱讀'}
                   </div>
                   <h1 style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', margin: 0, color: theme.ink, lineHeight: 1.15 }}>
                     {bibleData.reference}
@@ -905,8 +900,20 @@ const App: React.FC = () => {
             boxShadow: '0 12px 30px rgba(0,0,0,0.10)',
             display: 'flex', alignItems: 'center', gap: 4, zIndex: 30,
           }}>
+            {/* 今日 — action button, not a sheet toggle */}
+            <button onClick={() => { setMobileSheet(null); goToTodayInPlan(); }} style={{
+              flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+              background: selectedDate === todayStr && settings.scheduleMode === 'daily' ? A.base : 'transparent',
+              color: selectedDate === todayStr && settings.scheduleMode === 'daily' ? '#fff' : theme.inkSoft,
+              padding: '8px 4px', borderRadius: 12,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+              fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.04em',
+              transition: 'all .12s ease',
+            }}>
+              <Target size={19} strokeWidth={1.8} />
+              <span>今日</span>
+            </button>
             {([
-              { label: '今日', icon: <Target size={19} strokeWidth={1.8} />, sheet: null as null },
               { label: '計劃', icon: <CalendarDays size={19} strokeWidth={1.8} />, sheet: 'plan' as const },
               { label: '搜尋', icon: <Search size={19} strokeWidth={1.8} />, sheet: 'search' as const },
               { label: '設定', icon: <Settings size={19} strokeWidth={1.8} />, sheet: 'menu' as const },
@@ -1019,7 +1026,7 @@ const App: React.FC = () => {
                       autoFocus
                       value={input}
                       onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') { fetchBible(); setMobileSheet(null); } }}
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { fetchBible(); setMobileSheet(null); } }}
                       placeholder="如：詩 23、太 5"
                       style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 15, flex: 1, minWidth: 0 }}
                     />
@@ -1411,7 +1418,7 @@ const App: React.FC = () => {
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && fetchBible()}
+                onKeyDown={e => e.key === 'Enter' && !e.nativeEvent.isComposing && fetchBible()}
                 placeholder="搜尋…  如：詩 23"
                 style={{
                   appearance: 'none', border: 'none', outline: 'none',
@@ -1673,7 +1680,7 @@ const App: React.FC = () => {
                     color: theme.muted, marginBottom: 8,
                   }}>
                     {settings.scheduleMode === 'daily' && navStatus.inPlan
-                      ? `今日讀經 · ${selectedDate.slice(5).replace('-', '月')}日`
+                      ? `讀經進度 · ${selectedDate.slice(5).replace('-', '月')}日`
                       : '自由閱讀'}
                   </div>
                   <h1 style={{
