@@ -66,6 +66,13 @@ const ACCENT_PRESETS: Record<string, { label: string; light: AccentTone; dark: A
 
 const A_DEFAULT: AccentTone = ACCENT_PRESETS.ink.light;
 
+const FONT_STYLE_PRESETS: Record<string, { label: string; family: string; weight: number }> = {
+  'serif':      { label: '明體',   family: "'Noto Serif TC', serif",    weight: 400 },
+  'serif-bold': { label: '明體·粗', family: "'Noto Serif TC', serif",    weight: 700 },
+  'sans':       { label: '黑體',   family: "'Noto Sans TC', sans-serif", weight: 400 },
+  'sans-bold':  { label: '黑體·粗', family: "'Noto Sans TC', sans-serif", weight: 600 },
+};
+
 function getAccent(key: string, theme: Theme): AccentTone {
   const preset = ACCENT_PRESETS[key] ?? ACCENT_PRESETS.ink;
   return theme === 'dark' ? preset.dark : preset.light;
@@ -209,8 +216,10 @@ const BookPageVerses: React.FC<{
   fontSize: number;
   lineHeight: number;
   accent?: AccentTone;
-}> = ({ verses, theme, fontSize, lineHeight, accent = A_DEFAULT }) => {
+  fontStyle?: string;
+}> = ({ verses, theme, fontSize, lineHeight, accent = A_DEFAULT, fontStyle = 'serif' }) => {
   const t: TK = T[theme];
+  const vF = FONT_STYLE_PRESETS[fontStyle] ?? FONT_STYLE_PRESETS.serif;
   const baseSize = fontSize + 1;
   const sup: React.CSSProperties = {
     fontFamily: F.label, fontSize: 10, fontWeight: 600,
@@ -246,7 +255,7 @@ const BookPageVerses: React.FC<{
 
   return (
     <div style={{
-      fontFamily: F.serif, fontSize: baseSize,
+      fontFamily: vF.family, fontWeight: vF.weight, fontSize: baseSize,
       lineHeight: lineHeight + 0.05, color: t.ink,
       textAlign: 'justify', hyphens: 'auto',
     }}>
@@ -269,7 +278,7 @@ const BookPageVerses: React.FC<{
           <p key={si} style={{ margin: '0 0 1.2em', clear: si > 0 ? 'both' : undefined }}>
             {applyDropCap && dropChar && (
               <span style={{
-                float: 'left', fontFamily: F.serif,
+                float: 'left', fontFamily: vF.family,
                 fontSize: baseSize * 4, lineHeight: 0.88,
                 color: accent.base, fontWeight: 600,
                 marginRight: 12, marginTop: 6, letterSpacing: '-0.02em',
@@ -332,6 +341,7 @@ const App: React.FC = () => {
     primaryVersion: 'unv',
     secondaryVersion: null,
     scheduleHash: "",
+    fontStyle: 'serif',
   });
 
   const [input, setInput] = useState('');
@@ -758,6 +768,7 @@ const App: React.FC = () => {
 
   const theme = T[settings.theme];
   const A = getAccent(settings.accent ?? 'ink', settings.theme);
+  const vF = FONT_STYLE_PRESETS[settings.fontStyle ?? 'serif'] ?? FONT_STYLE_PRESETS.serif;
   const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v1.0.0-dev';
 
   const todayStr = useMemo(() => {
@@ -879,7 +890,7 @@ const App: React.FC = () => {
 
                 {/* Verses */}
                 {readingMode === 'standard' ? (
-                  <div style={{ display: 'grid', rowGap: Math.max(10, Math.round(settings.lineHeight * 14) - 4), fontFamily: F.serif, fontSize: Math.max(15, settings.fontSize - 2), lineHeight: settings.lineHeight, color: theme.ink }}>
+                  <div style={{ display: 'grid', rowGap: Math.max(10, Math.round(settings.lineHeight * 14) - 4), fontFamily: vF.family, fontWeight: vF.weight, fontSize: Math.max(15, settings.fontSize - 2), lineHeight: settings.lineHeight, color: theme.ink }}>
                     {filteredVerses.map((v, i) => (
                       <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
                         <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
@@ -888,7 +899,7 @@ const App: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} accent={A} />
+                  <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} accent={A} fontStyle={settings.fontStyle} />
                 )}
 
                 {/* Completion + nav footer */}
@@ -1163,6 +1174,15 @@ const App: React.FC = () => {
                       {[1.4, 1.55, 1.75, 1.9, 2.1].map(lh => (
                         <button key={lh} onClick={() => updateSetting('lineHeight', lh)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: '9px 0', borderRadius: 8, background: settings.lineHeight === lh ? A.base : theme.pill, color: settings.lineHeight === lh ? '#fff' : theme.muted, fontFamily: F.label, fontSize: 10, fontWeight: 600 }}>{lh}</button>
                       ))}
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>字體風格</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 4 }}>
+                      {Object.entries(FONT_STYLE_PRESETS).map(([key, p]) => {
+                        const isSel = (settings.fontStyle ?? 'serif') === key;
+                        return <button key={key} onClick={() => updateSetting('fontStyle', key)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: '9px 0', borderRadius: 8, background: isSel ? A.base : theme.pill, color: isSel ? '#fff' : theme.muted, fontFamily: p.family, fontWeight: p.weight, fontSize: 11 }}>{p.label}</button>;
+                      })}
                     </div>
                   </div>
                   <div style={{ height: 1, background: theme.line, margin: '8px 0 14px' }} />
@@ -1648,6 +1668,28 @@ const App: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Font style */}
+                  <div style={{ padding: '0 8px 8px' }}>
+                    <div style={{
+                      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+                      letterSpacing: '0.16em', textTransform: 'uppercase',
+                      color: theme.muted, marginBottom: 8,
+                    }}>字體風格</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 3 }}>
+                      {Object.entries(FONT_STYLE_PRESETS).map(([key, p]) => {
+                        const isSel = (settings.fontStyle ?? 'serif') === key;
+                        return <button key={key} onClick={() => updateSetting('fontStyle', key)} style={{
+                          appearance: 'none', border: 'none', cursor: 'pointer',
+                          padding: '6px 0', borderRadius: 6,
+                          background: isSel ? A.base : theme.pill,
+                          color: isSel ? '#fff' : theme.muted,
+                          fontFamily: p.family, fontWeight: p.weight, fontSize: 11,
+                          transition: 'all .12s ease',
+                        }}>{p.label}</button>;
+                      })}
+                    </div>
+                  </div>
+
                   <div style={{ height: 1, background: theme.line, margin: '4px 6px 6px' }} />
 
                   {/* Actions */}
@@ -1777,7 +1819,8 @@ const App: React.FC = () => {
                     gridTemplateColumns: filteredParallel ? '1fr 1fr' : '1fr',
                     columnGap: 32,
                     rowGap: Math.round(settings.lineHeight * 14),
-                    fontFamily: F.serif,
+                    fontFamily: vF.family,
+                    fontWeight: vF.weight,
                     fontSize: settings.fontSize,
                     lineHeight: settings.lineHeight,
                     color: theme.ink,

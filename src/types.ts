@@ -28,6 +28,7 @@ export interface AppSettings {
   primaryVersion: string;
   secondaryVersion: string | null;
   scheduleHash: string;
+  fontStyle: string;
 }
 
 export interface ScheduleItem {
