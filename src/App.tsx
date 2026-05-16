@@ -1180,11 +1180,11 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>行間距</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 4 }}>
-                      {[1.4, 1.55, 1.75, 1.9, 2.1].map(lh => (
-                        <button key={lh} onClick={() => updateSetting('lineHeight', lh)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', padding: '9px 0', borderRadius: 8, background: settings.lineHeight === lh ? A.base : theme.pill, color: settings.lineHeight === lh ? '#fff' : theme.muted, fontFamily: F.label, fontSize: 10, fontWeight: 600 }}>{lh}</button>
-                      ))}
+                    <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 10 }}>行間距&nbsp;<span style={{ color: theme.ink }}>{settings.lineHeight}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted, lineHeight: 1.2 }}>緊</span>
+                      <input type="range" min="1.4" max="2.1" step="0.05" value={settings.lineHeight} onChange={e => updateSetting('lineHeight', parseFloat(e.target.value))} style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted, lineHeight: 1.6 }}>鬆</span>
                     </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
@@ -1664,18 +1664,11 @@ const App: React.FC = () => {
                       fontFamily: F.label, fontSize: 9, fontWeight: 600,
                       letterSpacing: '0.16em', textTransform: 'uppercase',
                       color: theme.muted, marginBottom: 8,
-                    }}>行間距</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 3 }}>
-                      {[1.4, 1.55, 1.75, 1.9, 2.1].map(lh => (
-                        <button key={lh} onClick={() => updateSetting('lineHeight', lh)} style={{
-                          appearance: 'none', border: 'none', cursor: 'pointer',
-                          padding: '6px 0', borderRadius: 6,
-                          background: settings.lineHeight === lh ? A.base : theme.pill,
-                          color: settings.lineHeight === lh ? '#fff' : theme.muted,
-                          fontFamily: F.label, fontSize: 10, fontWeight: 600,
-                          transition: 'all .12s ease',
-                        }}>{lh}</button>
-                      ))}
+                    }}>行間距&nbsp;<span style={{ color: theme.ink, fontVariantNumeric: 'tabular-nums' }}>{settings.lineHeight}</span></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontFamily: F.label, fontSize: 10, color: theme.muted, lineHeight: 1.2 }}>緊</span>
+                      <input type="range" min="1.4" max="2.1" step="0.05" value={settings.lineHeight} onChange={e => updateSetting('lineHeight', parseFloat(e.target.value))} style={{ flex: 1, accentColor: A.base, cursor: 'pointer' }} />
+                      <span style={{ fontFamily: F.label, fontSize: 10, color: theme.muted, lineHeight: 1.6 }}>鬆</span>
                     </div>
                   </div>
 
