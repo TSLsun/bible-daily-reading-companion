@@ -354,7 +354,7 @@ const App: React.FC = () => {
   const [currentScheduleItemId, setCurrentScheduleItemId] = useState<string | null>(null);
   const [showImportField, setShowImportField] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-  const [mobileSheet, setMobileSheet] = useState<'plan' | 'menu' | 'search' | null>(null);
+  const [mobileSheet, setMobileSheet] = useState<'plan' | 'calendar' | 'menu' | 'search' | null>(null);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
 
   // Refs
@@ -801,14 +801,14 @@ const App: React.FC = () => {
           {/* Mobile top bar */}
           <div style={{
             padding: '8px 18px 10px', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            display: 'flex', alignItems: 'center', position: 'relative',
             borderBottom: `1px solid ${theme.line}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <button
-                onClick={() => setMobileSheet(s => s === 'plan' ? null : 'plan')}
+                onClick={() => setMobileSheet(s => s === 'calendar' ? null : 'calendar')}
                 style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                aria-label="計劃"
+                aria-label="月曆"
               ><CalendarDays size={19} /></button>
               <button
                 onClick={goToFirstUnfinished}
@@ -817,7 +817,11 @@ const App: React.FC = () => {
                 title="跳至最早未完成進度"
               ><BookMarked size={19} /></button>
             </div>
-            <div style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, letterSpacing: '-0.01em' }}>
+            <div style={{
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+              fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink, letterSpacing: '-0.01em',
+              pointerEvents: 'none', whiteSpace: 'nowrap',
+            }}>
               2026 每日讀經
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -963,7 +967,7 @@ const App: React.FC = () => {
           }}>
             {([
               { label: '今日',  icon: <Target      size={19} strokeWidth={1.8} />, active: selectedDate === todayStr && settings.scheduleMode === 'daily', onClick: () => { setMobileSheet(null); goToTodayInPlan(); } },
-              { label: '計劃',  icon: <CalendarDays size={19} strokeWidth={1.8} />, active: mobileSheet === 'plan',   onClick: () => setMobileSheet(s => s === 'plan'   ? null : 'plan')   },
+              { label: '計劃',  icon: <List         size={19} strokeWidth={1.8} />, active: mobileSheet === 'plan',   onClick: () => setMobileSheet(s => s === 'plan'   ? null : 'plan')   },
               { label: '搜尋',  icon: <Search       size={19} strokeWidth={1.8} />, active: mobileSheet === 'search', onClick: () => setMobileSheet(s => s === 'search' ? null : 'search') },
               { label: '設定',  icon: <Settings     size={19} strokeWidth={1.8} />, active: mobileSheet === 'menu',   onClick: () => setMobileSheet(s => s === 'menu'   ? null : 'menu')   },
             ]).map(tab => (
@@ -991,48 +995,10 @@ const App: React.FC = () => {
                   <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
                 </div>
                 <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>本月日曆 · 今日計劃</span>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>今日計劃</span>
                   <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
-                  {/* Mobile calendar */}
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronLeft size={14} /></button>
-                      <span style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink }}>{currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月</span>
-                      <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronRight size={14} /></button>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
-                      {['日', '一', '二', '三', '四', '五', '六'].map(d => (
-                        <div key={d} style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: theme.faint, textAlign: 'center', padding: 4 }}>{d}</div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
-                      {calendarDays.map((d, idx) => {
-                        if (!d) return <div key={`me${idx}`} style={{ aspectRatio: '1' }} />;
-                        const isSel = d.dateKey === selectedDate;
-                        const isToday = d.dateKey === todayStr;
-                        return (
-                          <button key={d.dateKey} onClick={() => { handleDayClick(d.dateKey); setMobileSheet(null); }} style={{
-                            appearance: 'none', border: 'none', cursor: 'pointer',
-                            aspectRatio: '1', borderRadius: 8,
-                            background: isSel ? A.base : 'transparent',
-                            color: isSel ? '#fff' : !d.hasPlan ? theme.faint : theme.ink,
-                            fontFamily: F.label, fontSize: 12, fontWeight: 500, position: 'relative',
-                            boxShadow: isToday && !isSel ? `inset 0 0 0 1.5px ${A.base}` : 'none',
-                            opacity: !d.hasPlan && !isSel ? 0.28 : 1,
-                          }}>
-                            {d.day}
-                            {d.hasPlan && (() => {
-                              const dotColor = isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint;
-                              return <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: dotColor }} />;
-                            })()}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div style={{ height: 1, background: theme.line, margin: '16px 0' }} />
                   <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 8 }}>今日章節</div>
                   {parsedSchedule.length > 0 ? (parsedSchedule as ScheduleItem[]).map(item => {
                     const done = settings.completedTasks.includes(item.id);
@@ -1049,6 +1015,58 @@ const App: React.FC = () => {
                   }) : (
                     <div style={{ padding: '14px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint, border: `1px dashed ${theme.line}`, borderRadius: 8 }}>本日無指定內容</div>
                   )}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Bottom sheet (calendar) */}
+          {mobileSheet === 'calendar' && (
+            <>
+              <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
+              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '80%', background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, display: 'flex', flexDirection: 'column', paddingBottom: 24 }}>
+                <div style={{ padding: '10px 0 6px', display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
+                </div>
+                <div style={{ padding: '4px 20px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>本月日曆</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() - 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronLeft size={14} /></button>
+                    <span style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink }}>{currentViewDate.getFullYear()}年 {currentViewDate.getMonth() + 1}月</span>
+                    <button onClick={() => setCurrentViewDate(new Date(currentViewDate.getFullYear(), currentViewDate.getMonth() + 1, 1))} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ChevronRight size={14} /></button>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+                    {['日', '一', '二', '三', '四', '五', '六'].map(d => (
+                      <div key={d} style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: theme.faint, textAlign: 'center', padding: 4 }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3 }}>
+                    {calendarDays.map((d, idx) => {
+                      if (!d) return <div key={`mc${idx}`} style={{ aspectRatio: '1' }} />;
+                      const isSel = d.dateKey === selectedDate;
+                      const isToday = d.dateKey === todayStr;
+                      return (
+                        <button key={d.dateKey} onClick={() => { handleDayClick(d.dateKey); setMobileSheet(null); }} style={{
+                          appearance: 'none', border: 'none', cursor: 'pointer',
+                          aspectRatio: '1', borderRadius: 8,
+                          background: isSel ? A.base : 'transparent',
+                          color: isSel ? '#fff' : !d.hasPlan ? theme.faint : theme.ink,
+                          fontFamily: F.label, fontSize: 12, fontWeight: 500, position: 'relative',
+                          boxShadow: isToday && !isSel ? `inset 0 0 0 1.5px ${A.base}` : 'none',
+                          opacity: !d.hasPlan && !isSel ? 0.28 : 1,
+                        }}>
+                          {d.day}
+                          {d.hasPlan && (() => {
+                            const dotColor = isSel ? 'rgba(255,255,255,0.7)' : d.isFullyCompleted ? theme.success : d.progress > 0 ? A.soft : theme.faint;
+                            return <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: dotColor }} />;
+                          })()}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </>
