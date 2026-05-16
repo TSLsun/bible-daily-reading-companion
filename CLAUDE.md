@@ -13,6 +13,7 @@ npm install       # Install dependencies
 npm run dev       # Start dev server
 npm run build     # Type-check + build to dist/
 npm run lint      # Run ESLint
+npm run test      # Run vitest test suite
 npm run preview   # Preview production build locally
 ```
 
@@ -21,8 +22,8 @@ The pre-commit hook runs `lint-staged` (ESLint with autofix on staged `.ts`/`.ts
 **After every implementation, always run:**
 ```bash
 npm run lint      # must pass with 0 errors
-npx vitest run   # all tests must pass
-npm run build    # tsc + vite build must succeed
+npm run test      # all tests must pass
+npm run build     # tsc + vite build must succeed
 ```
 
 ## Architecture
@@ -31,12 +32,13 @@ The codebase is intentionally minimal — nearly all UI and business logic lives
 
 | File | Role |
 |---|---|
-| `App.tsx` | Entire application: state, all React components, Bible fetch logic, schedule parsing |
+| `App.tsx` | Entire application: state, all React components, Bible fetch logic, schedule parsing, design tokens |
 | `constants.tsx` | `BIBLE_BOOKS` (Chinese→API code map), `BIBLE_ALIASES` (shorthand), `FALLBACK_VERSIONS` (translation list), `DEFAULT_DAILY_SCHEDULE` (full 2026 plan) |
 | `types.ts` | All TypeScript interfaces (`AppSettings`, `BibleData`, `ScheduleItem`, etc.) |
 | `index.tsx` | React root mount |
-| `index.html` | Loads Tailwind CSS via CDN, Google Fonts, and an importmap for ESM dev |
+| `index.html` | Loads Tailwind CSS via CDN, Google Fonts (Noto Serif TC, Noto Sans TC, Inter), and an importmap for ESM dev |
 | `vite.config.ts` | Sets `base` to `/bible-daily-reading-companion`, injects `__APP_VERSION__` global |
+| `src/utils/` | Pure functions extracted from App.tsx: `bible-lookup.ts`, `migrations.ts`, `schedule-parser.ts`, each with a co-located `.test.ts` file (35 tests total, run with vitest) |
 
 ## Key Concepts
 
@@ -46,7 +48,7 @@ Completed-reading tracking uses a three-generation ID format. The current format
 YYYY-MM-DD:BookCode[Chapter][:<startVerse>-<endVerse>]
 # e.g.  2026-01-01:Mt1   or   2026-04-29:Ps119:1-16
 ```
-On startup, `App.tsx` migrates legacy v1 (bare IDs like `Mt1`) and v2 (`MM-DD:Mt1`) records stored in `localStorage` to the v3 format. The `PLAN_YEAR` constant (currently `2026`, set at `App.tsx:197`) controls which year the calendar defaults to.
+On startup, `App.tsx` migrates legacy v1 (bare IDs like `Mt1`) and v2 (`MM-DD:Mt1`) records stored in `localStorage` to the v3 format. The `PLAN_YEAR` constant (currently `2026`) controls which year the calendar defaults to.
 
 ### Bible API
 Verses are fetched from `https://bible.fhl.net/json/qsb.php?qstr=<BookCode><Chapter>&version=<ver>&strong=0&gb=0`. The response is **Big5-encoded**, so it must be decoded with `new TextDecoder("big5")` before `JSON.parse`.
@@ -65,8 +67,16 @@ Multiple books on one line use the Chinese enumeration comma `、` (e.g., `俄 1
 ### State & Persistence
 All settings are stored under the `bible_settings` key in `localStorage`. The `saveSettings` / `updateSetting` helpers in `App.tsx` keep React state and localStorage in sync.
 
-### Theming
-Three themes: `light`, `sepia`, `dark`. Each component that varies by theme uses an inline lookup object keyed by `Theme` (e.g., `containerBg[theme]`). Tailwind is loaded via CDN — there is no Vite Tailwind plugin, so JIT/purging does not apply.
+### Theming & Design Tokens
+Three themes: `light`, `sepia`, `dark`. Design tokens live at the top of `App.tsx`:
+
+- **`T`** — `Record<Theme, TK>`: color palette per theme (bg, surface, ink, inkSoft, muted, faint, line, lineStrong, pill, success)
+- **`A`** — `AccentTone` (`{ base, soft, tint }`): derived per render via `getAccent(settings.accent, settings.theme)`
+- **`F`** — font family strings: `F.serif` (Noto Serif TC), `F.sans` (Noto Sans TC), `F.label` (Inter)
+- **`ACCENT_PRESETS`** — 5 named accent palettes (ink/pine/crimson/umber/violet), each with light+dark variants
+- **`FONT_STYLE_PRESETS`** — 4 named font styles (serif/serif-bold/sans/sans-bold) controlling verse font-family and font-weight
+
+When touching UI: use `theme.{token}` for colors, `A.{base|soft|tint}` for accent, `F.{serif|sans|label}` for fonts. Tailwind is loaded via CDN — there is no Vite Tailwind plugin, so JIT/purging does not apply; prefer inline styles using the token system over Tailwind classes.
 
 ### Deployment
 GitHub Actions (`deploy.yml`) builds and deploys to GitHub Pages on release publish. The build injects `VITE_COMMIT_SHA` (from `github.sha`) into the version string displayed in the footer.
