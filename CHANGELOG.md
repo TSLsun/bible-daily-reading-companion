@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.1](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.0.0...bible-companion-v2.0.1) (2026-05-16)
+
+
+### Bug Fixes
+
+* use PAT for Release Please so published releases trigger deploy ([#18](https://github.com/TSLsun/bible-daily-reading-companion/issues/18)) ([2797164](https://github.com/TSLsun/bible-daily-reading-companion/commit/27971648a51dc156e6beef13efccdd07a7cec4bf))
+
 ## [2.0.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.4.0...bible-companion-v2.0.0) (2026-05-16)
 
 
