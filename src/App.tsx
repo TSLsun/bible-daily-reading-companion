@@ -486,6 +486,11 @@ const App: React.FC = () => {
     return updated;
   };
 
+  const clearSecondaryVersion = () => {
+    updateSetting('secondaryVersion', null);
+    setParallelData(null);
+  };
+
   const cycleTheme = () => {
     const order: Theme[] = ['light', 'sepia', 'dark'];
     updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]);
@@ -880,7 +885,7 @@ const App: React.FC = () => {
                         style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: A.tint, color: A.base, appearance: 'none', border: 'none', cursor: 'pointer' }}
                       >{settings.primaryVersion}</button>
                       <button
-                        onClick={() => settings.secondaryVersion ? updateSetting('secondaryVersion', null) : setShowVersionPicker({ active: true, target: 'secondary' })}
+                        onClick={() => settings.secondaryVersion ? clearSecondaryVersion() : setShowVersionPicker({ active: true, target: 'secondary' })}
                         disabled={readingMode === 'book'}
                         style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: settings.secondaryVersion ? A.base : theme.pill, color: settings.secondaryVersion ? '#fff' : theme.muted, appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', opacity: readingMode === 'book' ? 0.35 : 1, transition: 'all .12s ease' }}
                       >{settings.secondaryVersion || '+ 對照'}</button>
@@ -888,7 +893,7 @@ const App: React.FC = () => {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: 2, borderRadius: 8, background: theme.pill }}>
                       <button onClick={() => setReadingMode('standard')} title="標準閱讀" style={modeBtn(readingMode === 'standard', theme)}><List size={13} /></button>
-                      <button onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) updateSetting('secondaryVersion', null); }} title="書頁模式" style={modeBtn(readingMode === 'book', theme)}><BookOpen size={13} /></button>
+                      <button onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) clearSecondaryVersion(); }} title="書頁模式" style={modeBtn(readingMode === 'book', theme)}><BookOpen size={13} /></button>
                     </div>
                   </div>
                 </div>
@@ -1550,7 +1555,7 @@ const App: React.FC = () => {
                 style={modeBtn(readingMode === 'standard', theme)}
               ><List size={13} /></button>
               <button
-                onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) updateSetting('secondaryVersion', null); }}
+                onClick={() => { setReadingMode('book'); if (settings.secondaryVersion) clearSecondaryVersion(); }}
                 title="書頁模式 · 連續排版 · 首字下沉"
                 style={modeBtn(readingMode === 'book', theme)}
               ><BookOpen size={13} /></button>
