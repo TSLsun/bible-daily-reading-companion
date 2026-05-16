@@ -16,7 +16,14 @@ npm run lint      # Run ESLint
 npm run preview   # Preview production build locally
 ```
 
-There is no test suite. The pre-commit hook runs `lint-staged` (ESLint with autofix on staged `.ts`/`.tsx` files).
+The pre-commit hook runs `lint-staged` (ESLint with autofix on staged `.ts`/`.tsx` files).
+
+**After every implementation, always run:**
+```bash
+npm run lint      # must pass with 0 errors
+npx vitest run   # all tests must pass
+npm run build    # tsc + vite build must succeed
+```
 
 ## Architecture
 
