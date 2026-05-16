@@ -884,11 +884,14 @@ const App: React.FC = () => {
                         onClick={() => setShowVersionPicker({ active: true, target: 'primary' })}
                         style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: A.tint, color: A.base, appearance: 'none', border: 'none', cursor: 'pointer' }}
                       >{settings.primaryVersion}</button>
-                      <button
-                        onClick={() => settings.secondaryVersion ? clearSecondaryVersion() : setShowVersionPicker({ active: true, target: 'secondary' })}
-                        disabled={readingMode === 'book'}
-                        style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: settings.secondaryVersion ? A.base : theme.pill, color: settings.secondaryVersion ? '#fff' : theme.muted, appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', opacity: readingMode === 'book' ? 0.35 : 1, transition: 'all .12s ease' }}
-                      >{settings.secondaryVersion || '+ 對照'}</button>
+                      {settings.secondaryVersion ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 999, background: A.base, overflow: 'hidden' }}>
+                          <button onClick={() => setShowVersionPicker({ active: true, target: 'secondary' })} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: '#fff', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 7px' }}>{settings.secondaryVersion}</button>
+                          <button onClick={clearSecondaryVersion} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(255,255,255,0.75)', padding: '3px 7px 3px 0', display: 'flex', alignItems: 'center' }}><X size={10} /></button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setShowVersionPicker({ active: true, target: 'secondary' })} disabled={readingMode === 'book'} style={{ appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: theme.pill, color: theme.muted, opacity: readingMode === 'book' ? 0.35 : 1 }}>+ 對照</button>
+                      )}
                       <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>{filteredVerses.length} 節</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: 2, borderRadius: 8, background: theme.pill }}>
@@ -1576,27 +1579,14 @@ const App: React.FC = () => {
                   boxShadow: `0 1px 0 ${theme.line}`,
                 }}
               >{settings.primaryVersion}</button>
-              <button
-                onClick={() => settings.secondaryVersion
-                  ? updateSetting('secondaryVersion', null)
-                  : setShowVersionPicker({ active: true, target: 'secondary' })
-                }
-                disabled={readingMode === 'book'}
-                title={readingMode === 'book' ? '書頁模式下不支援對照' : ''}
-                style={{
-                  appearance: 'none', border: 'none',
-                  cursor: readingMode === 'book' ? 'not-allowed' : 'pointer',
-                  padding: '5px 10px', borderRadius: 6,
-                  background: settings.secondaryVersion ? A.base : 'transparent',
-                  color: settings.secondaryVersion ? '#fff' : theme.muted,
-                  opacity: readingMode === 'book' ? 0.35 : 1,
-                  fontFamily: F.label, fontSize: 11, fontWeight: 600,
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  transition: 'all .12s ease',
-                }}
-              >
-                {settings.secondaryVersion || '+ 對照'}
-              </button>
+              {settings.secondaryVersion ? (
+                <div style={{ display: 'inline-flex', alignItems: 'center', borderRadius: 6, background: A.base, overflow: 'hidden', opacity: readingMode === 'book' ? 0.35 : 1 }}>
+                  <button onClick={() => setShowVersionPicker({ active: true, target: 'secondary' })} disabled={readingMode === 'book'} title="更換對照譯本" style={{ appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', background: 'transparent', color: '#fff', fontFamily: F.label, fontSize: 11, fontWeight: 600, padding: '5px 8px' }}>{settings.secondaryVersion}</button>
+                  <button onClick={clearSecondaryVersion} disabled={readingMode === 'book'} title="移除對照" style={{ appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', background: 'rgba(0,0,0,0.15)', color: 'rgba(255,255,255,0.8)', padding: '5px 7px', display: 'flex', alignItems: 'center' }}><X size={11} /></button>
+                </div>
+              ) : (
+                <button onClick={() => setShowVersionPicker({ active: true, target: 'secondary' })} disabled={readingMode === 'book'} title={readingMode === 'book' ? '書頁模式下不支援對照' : '新增對照譯本'} style={{ appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', padding: '5px 10px', borderRadius: 6, background: 'transparent', color: theme.muted, opacity: readingMode === 'book' ? 0.35 : 1, fontFamily: F.label, fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, transition: 'all .12s ease' }}>+ 對照</button>
+              )}
             </div>
 
             {/* Theme cycle button */}
