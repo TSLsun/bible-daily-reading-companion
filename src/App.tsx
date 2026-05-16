@@ -644,7 +644,7 @@ const App: React.FC = () => {
         const text = new TextDecoder('big5').decode(buffer);
         const data = JSON.parse(text);
         if (data.status !== 'success') throw new Error(`API Error: ${data.status}`);
-        return data.record.map((r: any) => ({ verse: r.sec, text: r.bible_text }));
+        return data.record.map((r: { sec: number; bible_text: string }) => ({ verse: r.sec, text: r.bible_text }));
       };
       const [data1, data2] = await Promise.all([
         fetchVersion(pVer),
@@ -657,7 +657,7 @@ const App: React.FC = () => {
       setParallelData(data2);
       setInput(reference);
       setCurrentScheduleItemId(refInfo?.scheduleItemId ?? null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setError('讀取失敗，請檢查網路或稍後再試。');
     } finally {
@@ -1081,7 +1081,7 @@ const App: React.FC = () => {
                   {/* Selected day plan */}
                   <div style={{ height: 1, background: theme.line, margin: '16px 0 12px' }} />
                   {(() => {
-                    const [y, m, dd] = selectedDate.split('-').map(Number);
+                    const [, m, dd] = selectedDate.split('-').map(Number);
                     const dateLabel = `${m}月${dd}日${selectedDate === todayStr ? ' · 今天' : ''}`;
                     const dayItems = parsedSchedule as ScheduleItem[];
                     return (
