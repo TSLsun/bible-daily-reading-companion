@@ -870,7 +870,7 @@ const App: React.FC = () => {
                   <div style={{ fontFamily: F.label, fontSize: 9, fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>
                     {settings.scheduleMode === 'daily' && navStatus.inPlan ? `讀經進度 · ${selectedDate.slice(5).replace('-', '月')}日` : '自由閱讀'}
                   </div>
-                  <h1 style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', margin: 0, color: theme.ink, lineHeight: 1.15 }}>
+                  <h1 style={{ fontFamily: vF.family, fontSize: 30, fontWeight: vF.weight, letterSpacing: '-0.02em', margin: 0, color: theme.ink, lineHeight: 1.15 }}>
                     {bibleData.reference}
                   </h1>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
@@ -1785,7 +1785,7 @@ const App: React.FC = () => {
                       : '自由閱讀'}
                   </div>
                   <h1 style={{
-                    fontFamily: F.serif, fontSize: 40, fontWeight: 600,
+                    fontFamily: vF.family, fontSize: 40, fontWeight: vF.weight,
                     letterSpacing: '-0.02em', margin: 0, color: theme.ink,
                     lineHeight: 1.1,
                   }}>{bibleData.reference}</h1>
