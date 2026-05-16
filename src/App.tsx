@@ -824,7 +824,7 @@ const App: React.FC = () => {
             }}>
               2026 每日讀經
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 'auto' }}>
               <button
                 onClick={cycleTheme}
                 style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
