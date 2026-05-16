@@ -1049,7 +1049,7 @@ const App: React.FC = () => {
                       const isSel = d.dateKey === selectedDate;
                       const isToday = d.dateKey === todayStr;
                       return (
-                        <button key={d.dateKey} onClick={() => { handleDayClick(d.dateKey); setMobileSheet(null); }} style={{
+                        <button key={d.dateKey} onClick={() => setSelectedDate(d.dateKey)} style={{
                           appearance: 'none', border: 'none', cursor: 'pointer',
                           aspectRatio: '1', borderRadius: 8,
                           background: isSel ? A.base : 'transparent',
@@ -1067,6 +1067,32 @@ const App: React.FC = () => {
                       );
                     })}
                   </div>
+                  {/* Selected day plan */}
+                  <div style={{ height: 1, background: theme.line, margin: '16px 0 12px' }} />
+                  {(() => {
+                    const [y, m, dd] = selectedDate.split('-').map(Number);
+                    const dateLabel = `${m}月${dd}日${selectedDate === todayStr ? ' · 今天' : ''}`;
+                    const dayItems = parsedSchedule as ScheduleItem[];
+                    return (
+                      <>
+                        <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', color: theme.muted, marginBottom: 8 }}>{dateLabel}</div>
+                        {dayItems.length > 0 ? dayItems.map(item => {
+                          const done = settings.completedTasks.includes(item.id);
+                          return (
+                            <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 8px', borderRadius: 10, marginBottom: 2, cursor: 'pointer' }}
+                              onClick={() => { fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id }); setMobileSheet(null); }}>
+                              <button onClick={e => { e.stopPropagation(); toggleTask(item.id); }} style={{ appearance: 'none', cursor: 'pointer', border: `1.5px solid ${done ? theme.success : theme.faint}`, background: done ? theme.success : 'transparent', width: 18, height: 18, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0, transition: 'all .12s ease' }}>
+                                {done && <CheckCircle2 size={11} />}
+                              </button>
+                              <span style={{ flex: 1, fontFamily: F.sans, fontSize: 14, fontWeight: 500, color: done ? theme.muted : theme.ink, textDecoration: done ? 'line-through' : 'none', textDecorationColor: theme.faint }}>{item.label}</span>
+                            </div>
+                          );
+                        }) : (
+                          <div style={{ padding: '12px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint, border: `1px dashed ${theme.line}`, borderRadius: 8 }}>本日無指定內容</div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </>
