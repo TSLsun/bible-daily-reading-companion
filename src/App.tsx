@@ -1176,8 +1176,7 @@ const App: React.FC = () => {
           {!railOpen && (
             <div style={{ padding: '4px 6px', display: 'flex', flexDirection: 'column', gap: 2 }}>
               {[
-                { icon: <CalendarDays size={17} />, title: '日曆', action: () => setRailOpen(true) },
-                { icon: <List size={17} />, title: '今日計劃', action: () => setRailOpen(true) },
+                { icon: <CalendarDays size={17} />, title: '日曆 / 今日計劃', action: () => setRailOpen(true) },
                 { icon: <Target size={17} />, title: '回到今天', action: goToTodayInPlan },
                 { icon: <BookMarked size={17} />, title: '跳到第一個未讀', action: goToFirstUnfinished },
               ].map((b, i) => (
