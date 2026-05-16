@@ -874,11 +874,16 @@ const App: React.FC = () => {
                     {bibleData.reference}
                   </h1>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <button
                         onClick={() => setShowVersionPicker({ active: true, target: 'primary' })}
                         style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: A.tint, color: A.base, appearance: 'none', border: 'none', cursor: 'pointer' }}
                       >{settings.primaryVersion}</button>
+                      <button
+                        onClick={() => settings.secondaryVersion ? updateSetting('secondaryVersion', null) : setShowVersionPicker({ active: true, target: 'secondary' })}
+                        disabled={readingMode === 'book'}
+                        style={{ display: 'inline-flex', alignItems: 'center', fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, background: settings.secondaryVersion ? A.base : theme.pill, color: settings.secondaryVersion ? '#fff' : theme.muted, appearance: 'none', border: 'none', cursor: readingMode === 'book' ? 'not-allowed' : 'pointer', opacity: readingMode === 'book' ? 0.35 : 1, transition: 'all .12s ease' }}
+                      >{settings.secondaryVersion || '+ 對照'}</button>
                       <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>{filteredVerses.length} 節</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 1, padding: 2, borderRadius: 8, background: theme.pill }}>
@@ -891,12 +896,18 @@ const App: React.FC = () => {
                 {/* Verses */}
                 {readingMode === 'standard' ? (
                   <div style={{ display: 'grid', rowGap: Math.max(10, Math.round(settings.lineHeight * 14) - 4), fontFamily: vF.family, fontWeight: vF.weight, fontSize: Math.max(15, settings.fontSize - 2), lineHeight: settings.lineHeight, color: theme.ink }}>
-                    {filteredVerses.map((v, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
-                        <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
-                        <div style={{ flex: 1, textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} accent={A} /></div>
-                      </div>
-                    ))}
+                    {filteredVerses.map((v, i) => {
+                      const pv = filteredParallel?.[i];
+                      return (
+                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                          <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} accent={A} /></div>
+                            {pv && <div style={{ marginTop: 4, textAlign: 'justify', fontStyle: 'italic', color: theme.inkSoft, opacity: 0.75 }}><VerseText text={pv.text} theme={settings.theme} accent={A} /></div>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <BookPageVerses verses={filteredVerses} theme={settings.theme} fontSize={Math.max(15, settings.fontSize - 2)} lineHeight={settings.lineHeight} accent={A} fontStyle={settings.fontStyle} />
