@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.4.0...bible-companion-v2.0.0) (2026-05-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* UI redesign — warm paper aesthetic, mobile layout, accent presets, book mode ([#15](https://github.com/TSLsun/bible-daily-reading-companion/issues/15))
+
+### Features
+
+* UI redesign — warm paper aesthetic, mobile layout, accent presets, book mode ([#15](https://github.com/TSLsun/bible-daily-reading-companion/issues/15)) ([d968aae](https://github.com/TSLsun/bible-daily-reading-companion/commit/d968aae665c57c51e36f085d099e0c0a1f350f0a))
+
 ## [1.4.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v1.3.0...bible-companion-v1.4.0) (2026-05-09)
 
 
