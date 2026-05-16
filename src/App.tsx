@@ -360,6 +360,7 @@ const App: React.FC = () => {
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const PLAN_YEAR = 2026;
 
@@ -437,6 +438,14 @@ const App: React.FC = () => {
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
+
+  // Scroll the import field into view when it appears in the mobile settings sheet.
+  useEffect(() => {
+    if (showImportField) {
+      const t = setTimeout(() => importInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+      return () => clearTimeout(t);
+    }
+  }, [showImportField]);
 
   // Auto-open today's first unfinished reading on page load.
   // Fires once after settings are loaded from localStorage (or immediately
@@ -665,9 +674,25 @@ const App: React.FC = () => {
   };
 
   const handleExportProgress = () => {
-    navigator.clipboard.writeText(JSON.stringify(settings.completedTasks)).then(() => {
-      showToast('進度代碼已複製到剪貼簿');
-    });
+    const text = JSON.stringify(settings.completedTasks);
+    const fallback = () => {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(el);
+      el.focus(); el.select();
+      try { document.execCommand('copy'); showToast('進度代碼已複製到剪貼簿'); }
+      catch { showToast('複製失敗，請手動複製進度代碼', 'error'); }
+      document.body.removeChild(el);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => showToast('進度代碼已複製到剪貼簿'),
+        fallback,
+      );
+    } else {
+      fallback();
+    }
   };
 
   const handleImportProgress = () => {
@@ -1113,7 +1138,7 @@ const App: React.FC = () => {
                   ))}
                   {showImportField && (
                     <div style={{ padding: '12px 0 0' }}>
-                      <input type="text" placeholder="在此貼上進度代碼…" value={migrationInput} onChange={e => setMigrationInput(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${theme.lineStrong}`, background: theme.bg, color: theme.ink, fontFamily: 'ui-monospace, monospace', fontSize: 11, outline: 'none', boxSizing: 'border-box' as const }} />
+                      <input ref={importInputRef} type="text" placeholder="在此貼上進度代碼…" value={migrationInput} onChange={e => setMigrationInput(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: `1px solid ${theme.lineStrong}`, background: theme.bg, color: theme.ink, fontFamily: 'ui-monospace, monospace', fontSize: 11, outline: 'none', boxSizing: 'border-box' as const }} />
                       <button onClick={handleImportProgress} style={{ width: '100%', marginTop: 8, appearance: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', borderRadius: 10, background: A.base, color: '#fff', fontFamily: F.label, fontSize: 13, fontWeight: 600 }}>確認匯入</button>
                     </div>
                   )}
