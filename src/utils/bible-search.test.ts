@@ -30,6 +30,9 @@ describe('resolveBookZh', () => {
   it('returns input unchanged for unknown', () => {
     expect(resolveBookZh('Unknown')).toBe('Unknown');
   });
+  it('resolves API code Joh to 約翰福音 via reverse lookup', () => {
+    expect(resolveBookZh('Joh')).toBe('約翰福音');
+  });
 });
 
 describe('parseSearchResponse', () => {

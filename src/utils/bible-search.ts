@@ -15,7 +15,9 @@ export function resolveBookCode(chineses: string): string {
 }
 
 export function resolveBookZh(chineses: string): string {
-  return BIBLE_ALIASES[chineses] ?? chineses;
+  if (BIBLE_ALIASES[chineses]) return BIBLE_ALIASES[chineses];
+  const found = Object.keys(BIBLE_BOOKS).find(k => BIBLE_BOOKS[k] === chineses);
+  return found ?? chineses;
 }
 
 export function parseSearchResponse(records: RawRecord[]): SearchResult[] {
