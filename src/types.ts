@@ -45,3 +45,11 @@ export interface VersionInfo {
   name: string;
   lang: string;
 }
+
+export interface SearchResult {
+  bookCode: string;   // API book code, e.g. 'Joh', 'Mt', '約一'
+  bookZh: string;     // Full Chinese book name, e.g. '約翰福音'
+  chapter: number;
+  verse: number;
+  text: string;
+}
