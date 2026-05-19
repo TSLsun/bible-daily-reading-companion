@@ -8,14 +8,16 @@ import {
   CalendarDays, List, Type,
 } from 'lucide-react';
 import {
-  BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
+  BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE,
+  BIBLE_CHAPTER_COUNTS, OT_BOOK_NAMES, NT_BOOK_NAMES,
 } from './constants';
 import {
-  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
+  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme, SearchResult,
 } from './types';
 import { findBookCode } from './utils/bible-lookup';
 import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
 import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
+import { searchBible } from './utils/bible-search';
 
 declare const __APP_VERSION__: string;
 
@@ -325,6 +327,117 @@ const AccentSwatches: React.FC<{
   </div>
 );
 
+// ─── SEARCH PANEL ────────────────────────────────────────────────────────────
+
+const SearchPanel: React.FC<{
+  theme: TK;
+  accent: AccentTone;
+  primaryVersion: string;
+  onSelect: (book: string, chapter: number) => void;
+}> = ({ theme, accent, primaryVersion, onSelect }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) { setResults([]); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const r = await searchBible(query.trim(), primaryVersion);
+        setResults(r);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, primaryVersion]);
+
+  const chapterCount = selectedBook ? (BIBLE_CHAPTER_COUNTS[BIBLE_BOOKS[selectedBook] ?? ''] ?? 0) : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: theme.pill }}>
+        <Search size={14} style={{ color: theme.muted, flexShrink: 0 }} />
+        <input
+          value={query}
+          onChange={e => { setQuery(e.target.value); setSelectedBook(null); }}
+          placeholder="關鍵字搜尋…"
+          style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 14, flex: 1, minWidth: 0 }}
+        />
+        {query && (
+          <button onClick={() => { setQuery(''); setResults([]); }} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.muted, padding: 0, display: 'flex', alignItems: 'center' }}>
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {query && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {searchLoading ? (
+            <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.muted }}>搜尋中…</div>
+          ) : results.length > 0 ? (
+            results.map((r, i) => (
+              <button key={i} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: accent.base }}>{r.bookZh} {r.chapter}:{r.verse}</span>
+                <span style={{ fontFamily: F.sans, fontSize: 13, color: theme.ink, lineHeight: 1.5 }}>{r.text.replace(/<[^>]+>/g, '').slice(0, 80)}</span>
+              </button>
+            ))
+          ) : (
+            <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint }}>無結果</div>
+          )}
+        </div>
+      )}
+
+      {!query && selectedBook && (
+        <div>
+          <button onClick={() => setSelectedBook(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', gap: 4, color: theme.muted, fontFamily: F.label, fontSize: 11, marginBottom: 8 }}>
+            <ChevronLeft size={12} /> 返回
+          </button>
+          <div style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: theme.ink, marginBottom: 8 }}>{selectedBook}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+            {Array.from({ length: chapterCount }, (_, i) => i + 1).map(ch => (
+              <button key={ch} onClick={() => onSelect(BIBLE_BOOKS[selectedBook] ?? selectedBook, ch)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.label, fontSize: 12, padding: '6px 0', borderRadius: 6, textAlign: 'center' }}>
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!query && !selectedBook && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>舊約</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+              {OT_BOOK_NAMES.map(book => (
+                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {book.replace(/書$|福音$|記$|篇$|傳$|歌$/, '')}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>新約</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+              {NT_BOOK_NAMES.map(book => (
+                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {book.replace(/書$|福音$|記$|篇$|傳$|歌$/, '')}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
 const App: React.FC = () => {
@@ -357,6 +470,7 @@ const App: React.FC = () => {
 
   // Layout & UI state
   const [railOpen, setRailOpen] = useState(true);
+  const [railSearchOpen, setRailSearchOpen] = useState(false);
   const [readingMode, setReadingMode] = useState<'standard' | 'book'>('standard');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
@@ -1132,29 +1246,34 @@ const App: React.FC = () => {
           {mobileSheet === 'search' && (
             <>
               <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
-              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, padding: '10px 0 32px' }}>
+              <div style={{
+                position: 'absolute', left: 0, right: 0, bottom: 0,
+                background: theme.surface,
+                borderTopLeftRadius: 22, borderTopRightRadius: 22,
+                boxShadow: '0 -16px 40px rgba(0,0,0,0.15)',
+                zIndex: 41,
+                padding: '10px 0 32px',
+                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+              }}>
                 <div style={{ padding: '0 0 8px', display: 'flex', justifyContent: 'center' }}>
                   <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
                 </div>
-                <div style={{ padding: '4px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>搜尋章節</span>
-                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
-                </div>
-                <div style={{ padding: '0 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: theme.pill }}>
-                    <Search size={16} style={{ color: theme.muted, flexShrink: 0 }} />
-                    <input
-                      autoFocus
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { fetchBible(); setMobileSheet(null); } }}
-                      placeholder="如：詩 23、太 5"
-                      style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 15, flex: 1, minWidth: 0 }}
-                    />
-                  </div>
-                  <button onClick={() => { fetchBible(); setMobileSheet(null); }} style={{ width: '100%', marginTop: 12, appearance: 'none', border: 'none', cursor: 'pointer', padding: '13px', borderRadius: 12, background: A.base, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 600 }}>
-                    開啟
+                <div style={{ padding: '4px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>搜尋</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={16} />
                   </button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+                  <SearchPanel
+                    theme={theme}
+                    accent={A}
+                    primaryVersion={settings.primaryVersion}
+                    onSelect={(book, chapter) => {
+                      fetchBible({ book, chapter });
+                      setMobileSheet(null);
+                    }}
+                  />
                 </div>
               </div>
             </>
@@ -1271,13 +1390,24 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-            <button
-              onClick={() => setRailOpen(r => !r)}
-              style={{ ...iconBtn(theme), color: theme.muted }}
-              title={railOpen ? '收合' : '展開'}
-            >
-              {railOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {railOpen && (
+                <button
+                  onClick={() => setRailSearchOpen(o => !o)}
+                  title="搜尋章節"
+                  style={{ ...iconBtn(theme), color: railSearchOpen ? A.base : theme.muted, background: railSearchOpen ? A.tint : 'transparent' }}
+                >
+                  <Search size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => setRailOpen(r => !r)}
+                style={{ ...iconBtn(theme), color: theme.muted }}
+                title={railOpen ? '收合' : '展開'}
+              >
+                {railOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
+            </div>
           </div>
 
           {/* Collapsed icon stack */}
@@ -1287,6 +1417,7 @@ const App: React.FC = () => {
                 { icon: <CalendarDays size={17} />, title: '日曆 / 今日計劃', action: () => setRailOpen(true) },
                 { icon: <Target size={17} />, title: '回到今天', action: goToTodayInPlan },
                 { icon: <BookMarked size={17} />, title: '跳到第一個未讀', action: goToFirstUnfinished },
+                { icon: <Search size={17} />, title: '搜尋章節', action: () => { setRailOpen(true); setRailSearchOpen(true); } },
               ].map((b, i) => (
                 <button key={i} onClick={b.action} title={b.title} style={{
                   appearance: 'none', border: 'none', cursor: 'pointer',
@@ -1307,6 +1438,18 @@ const App: React.FC = () => {
               padding: '0 16px 20px',
               display: 'flex', flexDirection: 'column', gap: 16,
             }}>
+              {railSearchOpen ? (
+                <SearchPanel
+                  theme={theme}
+                  accent={A}
+                  primaryVersion={settings.primaryVersion}
+                  onSelect={(book, chapter) => {
+                    fetchBible({ book, chapter });
+                    setRailSearchOpen(false);
+                  }}
+                />
+              ) : (
+              <>
               {/* CALENDAR */}
               <section>
                 <div style={{
@@ -1501,6 +1644,8 @@ const App: React.FC = () => {
                     }} />
                   </div>
                 </section>
+              )}
+              </>
               )}
             </div>
           )}
