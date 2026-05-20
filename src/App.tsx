@@ -333,7 +333,7 @@ const SearchPanel: React.FC<{
   accent: AccentTone;
   primaryVersion: string;
   columns?: 3 | 4;
-  inputRef?: React.RefObject<HTMLInputElement | null>;
+  inputRef?: React.RefObject<HTMLInputElement>;
   onSelect: (book: string, chapter: number) => void;
 }> = ({ theme, accent, primaryVersion, columns = 4, inputRef, onSelect }) => {
   const [query, setQuery] = useState('');
@@ -517,12 +517,18 @@ const App: React.FC = () => {
         e.preventDefault();
         setRailOpen(true);
         setRailSearchOpen(true);
-        setTimeout(() => searchPanelInputRef.current?.focus(), 50);
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, []);
+
+  // Focus search input when panel opens (via ⌘K or the toggle button)
+  useEffect(() => {
+    if (!railSearchOpen) return;
+    const id = requestAnimationFrame(() => searchPanelInputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [railSearchOpen]);
 
   useEffect(() => {
     if (!loading && bibleData) {
@@ -1448,7 +1454,7 @@ const App: React.FC = () => {
                   theme={theme}
                   accent={A}
                   columns={3}
-                  inputRef={searchPanelInputRef}
+                  inputRef={searchPanelInputRef as React.RefObject<HTMLInputElement>}
                   primaryVersion={settings.primaryVersion}
                   onSelect={(book, chapter) => {
                     fetchBible({ book, chapter });
