@@ -14,7 +14,6 @@ import {
 import {
   AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme, SearchResult,
 } from './types';
-import { findBookCode } from './utils/bible-lookup';
 import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
 import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
 import { searchBible } from './utils/bible-search';
@@ -334,8 +333,9 @@ const SearchPanel: React.FC<{
   accent: AccentTone;
   primaryVersion: string;
   columns?: 3 | 4;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   onSelect: (book: string, chapter: number) => void;
-}> = ({ theme, accent, primaryVersion, columns = 4, onSelect }) => {
+}> = ({ theme, accent, primaryVersion, columns = 4, inputRef, onSelect }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -370,6 +370,7 @@ const SearchPanel: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: theme.pill }}>
         <Search size={14} style={{ color: theme.muted, flexShrink: 0 }} />
         <input
+          ref={inputRef}
           value={query}
           onChange={e => { setQuery(e.target.value); setSelectedBook(null); }}
           placeholder="關鍵字搜尋…"
@@ -462,7 +463,6 @@ const App: React.FC = () => {
     fontStyle: 'serif',
   });
 
-  const [input, setInput] = useState('');
   const [migrationInput, setMigrationInput] = useState('');
   const [availableVersions] = useState<VersionInfo[]>(FALLBACK_VERSIONS);
   const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean; target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
@@ -490,6 +490,7 @@ const App: React.FC = () => {
   const settingsRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const searchPanelInputRef = useRef<HTMLInputElement>(null);
 
   const PLAN_YEAR = 2026;
 
@@ -509,6 +510,19 @@ const App: React.FC = () => {
   });
 
   // ── Effects ────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setRailOpen(true);
+        setRailSearchOpen(true);
+        setTimeout(() => searchPanelInputRef.current?.focus(), 50);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   useEffect(() => {
     if (!loading && bibleData) {
@@ -738,20 +752,7 @@ const App: React.FC = () => {
     customPrimary?: string,
     customSecondary?: string | null
   ) => {
-    let search = refInfo;
-    if (!search) {
-      const parsed = findBookCode(input);
-      const numbers = input.match(/\d+/g);
-      if (parsed && numbers) {
-        search = { book: parsed.en, chapter: parseInt(numbers[0]) };
-        if (input.includes(':') && numbers.length >= 2) {
-          search.startVerse = parseInt(numbers[1]);
-          if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
-        }
-      } else if (bibleData) {
-        search = { book: bibleData.bookCode, chapter: bibleData.chapter };
-      }
-    }
+    const search = refInfo;
     if (!search?.book || !search.chapter) return;
 
     const pVer = customPrimary || settings.primaryVersion;
@@ -779,7 +780,6 @@ const App: React.FC = () => {
         : `${bookZh} ${search.chapter}`);
       setBibleData({ reference, bookCode: search.book, chapter: search.chapter, startVerse: search.startVerse, endVerse: search.endVerse, verses: data1 });
       setParallelData(data2);
-      setInput(reference);
       setCurrentScheduleItemId(refInfo?.scheduleItemId ?? null);
     } catch (err: unknown) {
       console.error(err);
@@ -1448,6 +1448,7 @@ const App: React.FC = () => {
                   theme={theme}
                   accent={A}
                   columns={3}
+                  inputRef={searchPanelInputRef}
                   primaryVersion={settings.primaryVersion}
                   onSelect={(book, chapter) => {
                     fetchBible({ book, chapter });
@@ -1669,33 +1670,6 @@ const App: React.FC = () => {
             display: 'flex', alignItems: 'center',
             padding: '0 24px', gap: 10,
           }}>
-            {/* Search */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 12px', borderRadius: 8,
-              background: theme.pill,
-              flex: '0 0 auto', width: 260,
-            }}>
-              <Search size={13} style={{ color: theme.muted, flexShrink: 0 }} />
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.nativeEvent.isComposing && fetchBible()}
-                placeholder="搜尋…  如：詩 23"
-                style={{
-                  appearance: 'none', border: 'none', outline: 'none',
-                  background: 'transparent', color: theme.ink,
-                  fontFamily: F.sans, fontSize: 13, flex: 1, minWidth: 0,
-                }}
-              />
-              <span style={{
-                fontFamily: F.label, fontSize: 9, fontWeight: 600,
-                padding: '2px 5px', borderRadius: 3,
-                border: `1px solid ${theme.line}`, color: theme.faint,
-                flexShrink: 0,
-              }}>⌘K</span>
-            </div>
-
             <div style={{ flex: 1 }} />
 
             {/* Reading mode toggle */}
