@@ -53,6 +53,30 @@ export const FALLBACK_VERSIONS = [
   { id: 'web', name: 'World English Bible', lang: 'English' }
 ];
 
+export const BIBLE_CHAPTER_COUNTS: Record<string, number> = {
+  // Old Testament (39 books)
+  Ge: 50, Ex: 40, Le: 27, Nu: 36, De: 34,
+  Jos: 24, Jud: 21, Ru: 4, '撒上': 31, '撒下': 24,
+  '王上': 22, '王下': 25, '代上': 29, '代下': 36,
+  Ezr: 10, Ne: 13, Es: 10, Job: 42, Ps: 150,
+  Pr: 31, Ec: 12, So: 8, Isa: 66,
+  Jer: 52, La: 5, Eze: 48, Da: 12,
+  Ho: 14, Joe: 3, Am: 9, Ob: 1, Jon: 4,
+  Mic: 7, Na: 3, Hab: 3, Zep: 3, Hag: 2,
+  Zec: 14, Mal: 4,
+  // New Testament (27 books)
+  Mt: 28, Mr: 16, Lu: 24, Joh: 21, Ac: 28,
+  Ro: 16, '林前': 16, '林後': 13, Ga: 6, Eph: 6,
+  Php: 4, Col: 4, '帖前': 5, '帖後': 3,
+  '提前': 6, '提後': 4, Tit: 3, Phm: 1,
+  Heb: 13, Jas: 5, '彼前': 5, '彼後': 3,
+  '約一': 5, '約二': 1, '約三': 1, Jude: 1, Re: 22,
+};
+
+// Chinese book names in canonical order, split OT (39) / NT (27)
+export const OT_BOOK_NAMES = Object.keys(BIBLE_BOOKS).slice(0, 39);
+export const NT_BOOK_NAMES = Object.keys(BIBLE_BOOKS).slice(39);
+
 export const DEFAULT_DAILY_SCHEDULE = {
   "2026-01-01": "太 1-3\n詩 1",
   "2026-01-02": "太 4-6\n詩 2",

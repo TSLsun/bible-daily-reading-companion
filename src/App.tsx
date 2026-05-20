@@ -8,14 +8,15 @@ import {
   CalendarDays, List, Type,
 } from 'lucide-react';
 import {
-  BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE
+  BIBLE_BOOKS, FALLBACK_VERSIONS, DEFAULT_DAILY_SCHEDULE,
+  BIBLE_CHAPTER_COUNTS, OT_BOOK_NAMES, NT_BOOK_NAMES,
 } from './constants';
 import {
-  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme
+  AppSettings, BibleData, BibleVerse, ScheduleItem, VersionInfo, Theme, SearchResult,
 } from './types';
-import { findBookCode } from './utils/bible-lookup';
 import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
 import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
+import { searchBible } from './utils/bible-search';
 
 declare const __APP_VERSION__: string;
 
@@ -325,6 +326,124 @@ const AccentSwatches: React.FC<{
   </div>
 );
 
+// ─── SEARCH PANEL ────────────────────────────────────────────────────────────
+
+const SearchPanel: React.FC<{
+  theme: TK;
+  accent: AccentTone;
+  primaryVersion: string;
+  columns?: 3 | 4;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+  onSelect: (book: string, chapter: number) => void;
+}> = ({ theme, accent, primaryVersion, columns = 4, inputRef, onSelect }) => {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!query.trim()) { setResults([]); return; }
+    const controller = new AbortController();
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const r = await searchBible(query.trim(), primaryVersion, controller.signal);
+        if (!controller.signal.aborted) setResults(r);
+      } catch {
+        if (!controller.signal.aborted) setResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      controller.abort();
+    };
+  }, [query, primaryVersion]);
+
+  const chapterCount = selectedBook ? (BIBLE_CHAPTER_COUNTS[BIBLE_BOOKS[selectedBook] ?? ''] ?? 0) : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 10, background: theme.pill }}>
+        <Search size={14} style={{ color: theme.muted, flexShrink: 0 }} />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={e => { setQuery(e.target.value); setSelectedBook(null); }}
+          placeholder="關鍵字搜尋…"
+          style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 14, flex: 1, minWidth: 0 }}
+        />
+        {query && (
+          <button onClick={() => { setQuery(''); setResults([]); }} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.muted, padding: 0, display: 'flex', alignItems: 'center' }}>
+            <X size={13} />
+          </button>
+        )}
+      </div>
+
+      {query && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {searchLoading ? (
+            <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.muted }}>搜尋中…</div>
+          ) : results.length > 0 ? (
+            <>
+              <div style={{ fontFamily: F.label, fontSize: 10, color: theme.muted, padding: '2px 2px 4px', letterSpacing: '0.06em' }}>
+                搜尋結果 · {results.length} 節
+              </div>
+              {results.map((r) => (
+                <button key={`${r.bookCode}-${r.chapter}-${r.verse}`} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.surface, textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                  <span style={{ fontFamily: F.label, fontSize: 11, fontWeight: 600, color: accent.base }}>{r.bookZh} {r.chapter}:{r.verse}</span>
+                  <span style={{ fontFamily: F.serif, fontSize: 12, color: theme.inkSoft, lineHeight: 1.5 }}>{r.text.replace(/<[^>]+>/g, '').slice(0, 70)}</span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint }}>無結果</div>
+          )}
+        </div>
+      )}
+
+      {!query && selectedBook && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <button onClick={() => setSelectedBook(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', padding: 0, color: theme.muted }}>
+              <ChevronLeft size={18} />
+            </button>
+            <span style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, color: theme.ink }}>{selectedBook}</span>
+            <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>{chapterCount} 章</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+            {Array.from({ length: chapterCount }, (_, i) => i + 1).map(ch => (
+              <button key={ch} onClick={() => onSelect(BIBLE_BOOKS[selectedBook] ?? selectedBook, ch)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.label, fontSize: 12, padding: '6px 0', borderRadius: 6, textAlign: 'center' }}>
+                {ch}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!query && !selectedBook && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[{ label: '舊約', books: OT_BOOK_NAMES }, { label: '新約', books: NT_BOOK_NAMES }].map(({ label, books }) => (
+            <div key={label}>
+              <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>{label}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
+                {books.map(book => (
+                  <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                    {book}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
 const App: React.FC = () => {
@@ -344,7 +463,6 @@ const App: React.FC = () => {
     fontStyle: 'serif',
   });
 
-  const [input, setInput] = useState('');
   const [migrationInput, setMigrationInput] = useState('');
   const [availableVersions] = useState<VersionInfo[]>(FALLBACK_VERSIONS);
   const [showVersionPicker, setShowVersionPicker] = useState<{ active: boolean; target: 'primary' | 'secondary' }>({ active: false, target: 'primary' });
@@ -357,6 +475,7 @@ const App: React.FC = () => {
 
   // Layout & UI state
   const [railOpen, setRailOpen] = useState(true);
+  const [railSearchOpen, setRailSearchOpen] = useState(false);
   const [readingMode, setReadingMode] = useState<'standard' | 'book'>('standard');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
@@ -371,6 +490,7 @@ const App: React.FC = () => {
   const settingsRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const searchPanelInputRef = useRef<HTMLInputElement>(null);
 
   const PLAN_YEAR = 2026;
 
@@ -390,6 +510,25 @@ const App: React.FC = () => {
   });
 
   // ── Effects ────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setRailOpen(true);
+        setRailSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  // Defer one frame so the panel is in the DOM before attempting focus
+  useEffect(() => {
+    if (!railSearchOpen) return;
+    const id = requestAnimationFrame(() => searchPanelInputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [railSearchOpen]);
 
   useEffect(() => {
     if (!loading && bibleData) {
@@ -619,20 +758,7 @@ const App: React.FC = () => {
     customPrimary?: string,
     customSecondary?: string | null
   ) => {
-    let search = refInfo;
-    if (!search) {
-      const parsed = findBookCode(input);
-      const numbers = input.match(/\d+/g);
-      if (parsed && numbers) {
-        search = { book: parsed.en, chapter: parseInt(numbers[0]) };
-        if (input.includes(':') && numbers.length >= 2) {
-          search.startVerse = parseInt(numbers[1]);
-          if (numbers.length >= 3) search.endVerse = parseInt(numbers[2]);
-        }
-      } else if (bibleData) {
-        search = { book: bibleData.bookCode, chapter: bibleData.chapter };
-      }
-    }
+    const search = refInfo;
     if (!search?.book || !search.chapter) return;
 
     const pVer = customPrimary || settings.primaryVersion;
@@ -660,7 +786,6 @@ const App: React.FC = () => {
         : `${bookZh} ${search.chapter}`);
       setBibleData({ reference, bookCode: search.book, chapter: search.chapter, startVerse: search.startVerse, endVerse: search.endVerse, verses: data1 });
       setParallelData(data2);
-      setInput(reference);
       setCurrentScheduleItemId(refInfo?.scheduleItemId ?? null);
     } catch (err: unknown) {
       console.error(err);
@@ -1132,29 +1257,34 @@ const App: React.FC = () => {
           {mobileSheet === 'search' && (
             <>
               <div onClick={() => setMobileSheet(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 40 }} />
-              <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, background: theme.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, boxShadow: '0 -16px 40px rgba(0,0,0,0.15)', zIndex: 41, padding: '10px 0 32px' }}>
+              <div style={{
+                position: 'absolute', left: 0, right: 0, bottom: 0,
+                background: theme.surface,
+                borderTopLeftRadius: 22, borderTopRightRadius: 22,
+                boxShadow: '0 -16px 40px rgba(0,0,0,0.15)',
+                zIndex: 41,
+                padding: '10px 0 32px',
+                maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+              }}>
                 <div style={{ padding: '0 0 8px', display: 'flex', justifyContent: 'center' }}>
                   <div style={{ width: 36, height: 4, borderRadius: 999, background: theme.faint }} />
                 </div>
-                <div style={{ padding: '4px 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>搜尋章節</span>
-                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} /></button>
-                </div>
-                <div style={{ padding: '0 20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: theme.pill }}>
-                    <Search size={16} style={{ color: theme.muted, flexShrink: 0 }} />
-                    <input
-                      autoFocus
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { fetchBible(); setMobileSheet(null); } }}
-                      placeholder="如：詩 23、太 5"
-                      style={{ appearance: 'none', border: 'none', outline: 'none', background: 'transparent', color: theme.ink, fontFamily: F.sans, fontSize: 15, flex: 1, minWidth: 0 }}
-                    />
-                  </div>
-                  <button onClick={() => { fetchBible(); setMobileSheet(null); }} style={{ width: '100%', marginTop: 12, appearance: 'none', border: 'none', cursor: 'pointer', padding: '13px', borderRadius: 12, background: A.base, color: '#fff', fontFamily: F.sans, fontSize: 15, fontWeight: 600 }}>
-                    開啟
+                <div style={{ padding: '4px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                  <span style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 600, color: theme.ink }}>搜尋</span>
+                  <button onClick={() => setMobileSheet(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <X size={16} />
                   </button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+                  <SearchPanel
+                    theme={theme}
+                    accent={A}
+                    primaryVersion={settings.primaryVersion}
+                    onSelect={(book, chapter) => {
+                      fetchBible({ book, chapter });
+                      setMobileSheet(null);
+                    }}
+                  />
                 </div>
               </div>
             </>
@@ -1271,13 +1401,24 @@ const App: React.FC = () => {
                 </div>
               </div>
             )}
-            <button
-              onClick={() => setRailOpen(r => !r)}
-              style={{ ...iconBtn(theme), color: theme.muted }}
-              title={railOpen ? '收合' : '展開'}
-            >
-              {railOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {railOpen && (
+                <button
+                  onClick={() => setRailSearchOpen(o => !o)}
+                  title="搜尋章節"
+                  style={{ ...iconBtn(theme), color: railSearchOpen ? A.base : theme.muted, background: railSearchOpen ? A.tint : 'transparent' }}
+                >
+                  <Search size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => { setRailOpen(r => !r); if (railOpen) setRailSearchOpen(false); }}
+                style={{ ...iconBtn(theme), color: theme.muted }}
+                title={railOpen ? '收合' : '展開'}
+              >
+                {railOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+              </button>
+            </div>
           </div>
 
           {/* Collapsed icon stack */}
@@ -1287,6 +1428,7 @@ const App: React.FC = () => {
                 { icon: <CalendarDays size={17} />, title: '日曆 / 今日計劃', action: () => setRailOpen(true) },
                 { icon: <Target size={17} />, title: '回到今天', action: goToTodayInPlan },
                 { icon: <BookMarked size={17} />, title: '跳到第一個未讀', action: goToFirstUnfinished },
+                { icon: <Search size={17} />, title: '搜尋章節', action: () => { setRailOpen(true); setRailSearchOpen(true); } },
               ].map((b, i) => (
                 <button key={i} onClick={b.action} title={b.title} style={{
                   appearance: 'none', border: 'none', cursor: 'pointer',
@@ -1307,6 +1449,20 @@ const App: React.FC = () => {
               padding: '0 16px 20px',
               display: 'flex', flexDirection: 'column', gap: 16,
             }}>
+              {railSearchOpen ? (
+                <SearchPanel
+                  theme={theme}
+                  accent={A}
+                  columns={3}
+                  inputRef={searchPanelInputRef}
+                  primaryVersion={settings.primaryVersion}
+                  onSelect={(book, chapter) => {
+                    fetchBible({ book, chapter });
+                    setRailSearchOpen(false);
+                  }}
+                />
+              ) : (
+              <>
               {/* CALENDAR */}
               <section>
                 <div style={{
@@ -1502,6 +1658,8 @@ const App: React.FC = () => {
                   </div>
                 </section>
               )}
+              </>
+              )}
             </div>
           )}
         </aside>
@@ -1518,33 +1676,6 @@ const App: React.FC = () => {
             display: 'flex', alignItems: 'center',
             padding: '0 24px', gap: 10,
           }}>
-            {/* Search */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '6px 12px', borderRadius: 8,
-              background: theme.pill,
-              flex: '0 0 auto', width: 260,
-            }}>
-              <Search size={13} style={{ color: theme.muted, flexShrink: 0 }} />
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !e.nativeEvent.isComposing && fetchBible()}
-                placeholder="搜尋…  如：詩 23"
-                style={{
-                  appearance: 'none', border: 'none', outline: 'none',
-                  background: 'transparent', color: theme.ink,
-                  fontFamily: F.sans, fontSize: 13, flex: 1, minWidth: 0,
-                }}
-              />
-              <span style={{
-                fontFamily: F.label, fontSize: 9, fontWeight: 600,
-                padding: '2px 5px', borderRadius: 3,
-                border: `1px solid ${theme.line}`, color: theme.faint,
-                flexShrink: 0,
-              }}>⌘K</span>
-            </div>
-
             <div style={{ flex: 1 }} />
 
             {/* Reading mode toggle */}
