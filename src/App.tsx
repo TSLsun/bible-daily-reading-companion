@@ -333,7 +333,7 @@ const SearchPanel: React.FC<{
   accent: AccentTone;
   primaryVersion: string;
   columns?: 3 | 4;
-  inputRef?: React.RefObject<HTMLInputElement>;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   onSelect: (book: string, chapter: number) => void;
 }> = ({ theme, accent, primaryVersion, columns = 4, inputRef, onSelect }) => {
   const [query, setQuery] = useState('');
@@ -1454,7 +1454,7 @@ const App: React.FC = () => {
                   theme={theme}
                   accent={A}
                   columns={3}
-                  inputRef={searchPanelInputRef as React.RefObject<HTMLInputElement>}
+                  inputRef={searchPanelInputRef}
                   primaryVersion={settings.primaryVersion}
                   onSelect={(book, chapter) => {
                     fetchBible({ book, chapter });
