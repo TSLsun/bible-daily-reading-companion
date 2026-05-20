@@ -973,11 +973,6 @@ const App: React.FC = () => {
               >
                 {settings.theme === 'dark' ? <Moon size={17} /> : settings.theme === 'sepia' ? <Coffee size={17} /> : <Sun size={17} />}
               </button>
-              <button
-                onClick={() => setMobileSheet(s => s === 'menu' ? null : 'menu')}
-                style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', color: theme.inkSoft, width: 36, height: 36, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                aria-label="設定"
-              ><Settings size={19} /></button>
             </div>
           </div>
 
