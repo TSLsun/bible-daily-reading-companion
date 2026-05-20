@@ -30,9 +30,10 @@ export function parseSearchResponse(records: RawRecord[]): SearchResult[] {
   }));
 }
 
-export async function searchBible(query: string, version: string): Promise<SearchResult[]> {
+export async function searchBible(query: string, version: string, signal?: AbortSignal): Promise<SearchResult[]> {
   const res = await fetch(
-    `https://bible.fhl.net/json/se.php?VERSION=${version}&q=${encodeURIComponent(query)}&gb=0`
+    `https://bible.fhl.net/json/se.php?VERSION=${version}&q=${encodeURIComponent(query)}&gb=0`,
+    { signal }
   );
   const buf = await res.arrayBuffer();
   const text = new TextDecoder('big5').decode(buf);

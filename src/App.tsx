@@ -345,18 +345,22 @@ const SearchPanel: React.FC<{
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!query.trim()) { setResults([]); return; }
+    const controller = new AbortController();
     debounceRef.current = setTimeout(async () => {
       setSearchLoading(true);
       try {
-        const r = await searchBible(query.trim(), primaryVersion);
-        setResults(r);
+        const r = await searchBible(query.trim(), primaryVersion, controller.signal);
+        if (!controller.signal.aborted) setResults(r);
       } catch {
-        setResults([]);
+        if (!controller.signal.aborted) setResults([]);
       } finally {
-        setSearchLoading(false);
+        if (!controller.signal.aborted) setSearchLoading(false);
       }
     }, 400);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      controller.abort();
+    };
   }, [query, primaryVersion]);
 
   const chapterCount = selectedBook ? (BIBLE_CHAPTER_COUNTS[BIBLE_BOOKS[selectedBook] ?? ''] ?? 0) : 0;
@@ -387,8 +391,8 @@ const SearchPanel: React.FC<{
               <div style={{ fontFamily: F.label, fontSize: 10, color: theme.muted, padding: '2px 2px 4px', letterSpacing: '0.06em' }}>
                 搜尋結果 · {results.length} 節
               </div>
-              {results.map((r, i) => (
-                <button key={i} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.surface, textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+              {results.map((r) => (
+                <button key={`${r.bookCode}-${r.chapter}-${r.verse}`} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.surface, textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
                   <span style={{ fontFamily: F.label, fontSize: 11, fontWeight: 600, color: accent.base }}>{r.bookZh} {r.chapter}:{r.verse}</span>
                   <span style={{ fontFamily: F.serif, fontSize: 12, color: theme.inkSoft, lineHeight: 1.5 }}>{r.text.replace(/<[^>]+>/g, '').slice(0, 70)}</span>
                 </button>
