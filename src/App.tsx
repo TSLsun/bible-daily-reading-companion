@@ -485,12 +485,20 @@ const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [mobileSheet, setMobileSheet] = useState<'plan' | 'calendar' | 'menu' | 'search' | null>(null);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [showKeymapHelp, setShowKeymapHelp] = useState(false);
 
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchPanelInputRef = useRef<HTMLInputElement>(null);
+  const selectedDateRef = useRef<string>('');
+  const goToTodayRef = useRef<() => void>(() => {});
+  const goToFirstUnfinishedRef = useRef<() => void>(() => {});
+  const goToNextDayRef = useRef<() => void>(() => {});
+  const markCurrentAsReadRef = useRef<() => void>(() => {});
+  const cycleThemeRef = useRef<() => void>(() => {});
 
   const PLAN_YEAR = 2026;
 
@@ -893,6 +901,14 @@ const App: React.FC = () => {
     setCurrentViewDate(new Date(y, m - 1, d));
     handleDayClick(nextDayWithPlan);
   };
+
+  // Keep action refs current so the keymap handler always calls the latest closures
+  selectedDateRef.current = selectedDate;
+  goToTodayRef.current = goToTodayInPlan;
+  goToFirstUnfinishedRef.current = goToFirstUnfinished;
+  goToNextDayRef.current = goToNextDay;
+  markCurrentAsReadRef.current = markCurrentAsRead;
+  cycleThemeRef.current = cycleTheme;
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
