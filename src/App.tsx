@@ -354,7 +354,7 @@ const SearchPanel: React.FC<{
       } catch {
         if (!controller.signal.aborted) setResults([]);
       } finally {
-        if (!controller.signal.aborted) setSearchLoading(false);
+        setSearchLoading(false);
       }
     }, 400);
     return () => {
@@ -425,26 +425,18 @@ const SearchPanel: React.FC<{
 
       {!query && !selectedBook && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>舊約</div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
-              {OT_BOOK_NAMES.map(book => (
-                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                  {book}
-                </button>
-              ))}
+          {[{ label: '舊約', books: OT_BOOK_NAMES }, { label: '新約', books: NT_BOOK_NAMES }].map(({ label, books }) => (
+            <div key={label}>
+              <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>{label}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
+                {books.map(book => (
+                  <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                    {book}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>新約</div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
-              {NT_BOOK_NAMES.map(book => (
-                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                  {book}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       )}
     </div>
@@ -1414,7 +1406,7 @@ const App: React.FC = () => {
                 </button>
               )}
               <button
-                onClick={() => setRailOpen(r => !r)}
+                onClick={() => { setRailOpen(r => !r); if (railOpen) setRailSearchOpen(false); }}
                 style={{ ...iconBtn(theme), color: theme.muted }}
                 title={railOpen ? '收合' : '展開'}
               >
