@@ -333,8 +333,9 @@ const SearchPanel: React.FC<{
   theme: TK;
   accent: AccentTone;
   primaryVersion: string;
+  columns?: 3 | 4;
   onSelect: (book: string, chapter: number) => void;
-}> = ({ theme, accent, primaryVersion, onSelect }) => {
+}> = ({ theme, accent, primaryVersion, columns = 4, onSelect }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -382,12 +383,17 @@ const SearchPanel: React.FC<{
           {searchLoading ? (
             <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.muted }}>搜尋中…</div>
           ) : results.length > 0 ? (
-            results.map((r, i) => (
-              <button key={i} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: accent.base }}>{r.bookZh} {r.chapter}:{r.verse}</span>
-                <span style={{ fontFamily: F.sans, fontSize: 13, color: theme.ink, lineHeight: 1.5 }}>{r.text.replace(/<[^>]+>/g, '').slice(0, 80)}</span>
-              </button>
-            ))
+            <>
+              <div style={{ fontFamily: F.label, fontSize: 10, color: theme.muted, padding: '2px 2px 4px', letterSpacing: '0.06em' }}>
+                搜尋結果 · {results.length} 節
+              </div>
+              {results.map((r, i) => (
+                <button key={i} onClick={() => onSelect(r.bookCode, r.chapter)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.surface, textAlign: 'left', padding: '8px 10px', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                  <span style={{ fontFamily: F.label, fontSize: 11, fontWeight: 600, color: accent.base }}>{r.bookZh} {r.chapter}:{r.verse}</span>
+                  <span style={{ fontFamily: F.serif, fontSize: 12, color: theme.inkSoft, lineHeight: 1.5 }}>{r.text.replace(/<[^>]+>/g, '').slice(0, 70)}</span>
+                </button>
+              ))}
+            </>
           ) : (
             <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: F.label, fontSize: 12, color: theme.faint }}>無結果</div>
           )}
@@ -396,10 +402,13 @@ const SearchPanel: React.FC<{
 
       {!query && selectedBook && (
         <div>
-          <button onClick={() => setSelectedBook(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', gap: 4, color: theme.muted, fontFamily: F.label, fontSize: 11, marginBottom: 8 }}>
-            <ChevronLeft size={12} /> 返回
-          </button>
-          <div style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: theme.ink, marginBottom: 8 }}>{selectedBook}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <button onClick={() => setSelectedBook(null)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: 'transparent', display: 'flex', alignItems: 'center', padding: 0, color: theme.muted }}>
+              <ChevronLeft size={18} />
+            </button>
+            <span style={{ fontFamily: F.sans, fontSize: 14, fontWeight: 600, color: theme.ink }}>{selectedBook}</span>
+            <span style={{ fontFamily: F.label, fontSize: 11, color: theme.muted }}>{chapterCount} 章</span>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
             {Array.from({ length: chapterCount }, (_, i) => i + 1).map(ch => (
               <button key={ch} onClick={() => onSelect(BIBLE_BOOKS[selectedBook] ?? selectedBook, ch)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.label, fontSize: 12, padding: '6px 0', borderRadius: 6, textAlign: 'center' }}>
@@ -414,20 +423,20 @@ const SearchPanel: React.FC<{
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>舊約</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
               {OT_BOOK_NAMES.map(book => (
-                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {book.replace(/書$|福音$|記$|篇$|傳$|歌$/, '')}
+                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                  {book}
                 </button>
               ))}
             </div>
           </div>
           <div>
             <div style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.muted, marginBottom: 6 }}>新約</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: 4 }}>
               {NT_BOOK_NAMES.map(book => (
-                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {book.replace(/書$|福音$|記$|篇$|傳$|歌$/, '')}
+                <button key={book} onClick={() => setSelectedBook(book)} style={{ appearance: 'none', border: 'none', cursor: 'pointer', background: theme.pill, color: theme.ink, fontFamily: F.sans, fontSize: 11, padding: '6px 4px', borderRadius: 6, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                  {book}
                 </button>
               ))}
             </div>
@@ -1442,6 +1451,7 @@ const App: React.FC = () => {
                 <SearchPanel
                   theme={theme}
                   accent={A}
+                  columns={3}
                   primaryVersion={settings.primaryVersion}
                   onSelect={(book, chapter) => {
                     fetchBible({ book, chapter });
