@@ -523,7 +523,7 @@ const App: React.FC = () => {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  // Focus search input when panel opens (via ⌘K or the toggle button)
+  // Defer one frame so the panel is in the DOM before attempting focus
   useEffect(() => {
     if (!railSearchOpen) return;
     const id = requestAnimationFrame(() => searchPanelInputRef.current?.focus());
