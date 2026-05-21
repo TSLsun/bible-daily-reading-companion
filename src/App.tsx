@@ -485,12 +485,25 @@ const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [mobileSheet, setMobileSheet] = useState<'plan' | 'calendar' | 'menu' | 'search' | null>(null);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
+  const [showKeymapHelp, setShowKeymapHelp] = useState(false);
 
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchPanelInputRef = useRef<HTMLInputElement>(null);
+  const keymapModalRef = useRef<HTMLDivElement>(null);
+  const selectedDateRef = useRef<string>('');
+  const goToTodayRef = useRef<() => void>(() => {});
+  const goToFirstUnfinishedRef = useRef<() => void>(() => {});
+  const goToNextDayRef = useRef<() => void>(() => {});
+  const markCurrentAsReadRef = useRef<() => void>(() => {});
+  const cycleThemeRef = useRef<() => void>(() => {});
+  const handleDayClickRef      = useRef<(dateKey: string) => void>(() => {});
+  const goToPrevDayRef         = useRef<() => void>(() => {});
+  const goToNextItemRef        = useRef<() => void>(() => {});
+  const goToPrevItemRef        = useRef<() => void>(() => {});
+  const toggleReadingModeRef   = useRef<() => void>(() => {});
 
   const PLAN_YEAR = 2026;
 
@@ -512,16 +525,174 @@ const App: React.FC = () => {
   // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setRailOpen(true);
-        setRailSearchOpen(true);
+    const pendingG = { current: false };
+
+    const navigateDay = (delta: number) => {
+      const [yr, mo, dy] = selectedDateRef.current.split('-').map(Number);
+      const d = new Date(yr, mo - 1, dy);
+      d.setDate(d.getDate() + delta);
+      setCurrentViewDate(d);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      handleDayClickRef.current(iso);
+    };
+
+    const pendingDigits = { current: '' };
+    const scrollTarget = { current: 0 };
+    const scrollAnimating = { current: false };
+    const animateScroll = () => {
+      const el = mainScrollRef.current;
+      if (!el) { scrollAnimating.current = false; return; }
+      const diff = scrollTarget.current - el.scrollTop;
+      if (Math.abs(diff) < 0.5) {
+        el.scrollTop = scrollTarget.current;
+        scrollAnimating.current = false;
+        return;
+      }
+      el.scrollTop += diff * 0.15;
+      requestAnimationFrame(animateScroll);
+    };
+    const smoothScrollTo = (top: number) => {
+      const el = mainScrollRef.current;
+      if (!el) return;
+      const max = el.scrollHeight - el.clientHeight;
+      scrollTarget.current = Math.max(0, Math.min(max, top));
+      if (!scrollAnimating.current) {
+        scrollAnimating.current = true;
+        requestAnimationFrame(animateScroll);
       }
     };
+    const jumpToVerse = (verseNum: number) => {
+      const container = mainScrollRef.current;
+      if (!container) return;
+      const el = container.querySelector(`[data-verse="${verseNum}"]`) as HTMLElement | null;
+      if (!el) return;
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      smoothScrollTo(elRect.top - containerRect.top + container.scrollTop - 60);
+    };
+    const smoothScrollBy = (delta: number) => {
+      const el = mainScrollRef.current;
+      if (!el) return;
+      if (!scrollAnimating.current) scrollTarget.current = el.scrollTop;
+      const max = el.scrollHeight - el.clientHeight;
+      const cap = el.clientHeight * 0.8;
+      const raw = scrollTarget.current + delta;
+      scrollTarget.current = Math.max(
+        el.scrollTop - cap,
+        Math.min(el.scrollTop + cap, Math.max(0, Math.min(max, raw)))
+      );
+      if (!scrollAnimating.current) {
+        scrollAnimating.current = true;
+        requestAnimationFrame(animateScroll);
+      }
+    };
+
+    const handler = (e: KeyboardEvent) => {
+      const isInInput =
+        e.target instanceof HTMLElement &&
+        (e.target.tagName === 'INPUT' ||
+          e.target.tagName === 'TEXTAREA' ||
+          e.target.isContentEditable);
+
+      if (e.key === 'Escape') {
+        pendingG.current = false;
+        pendingDigits.current = '';
+        setRailSearchOpen(false);
+        setSettingsOpen(false);
+        setMobileSheet(null);
+        setShowKeymapHelp(false);
+        return;
+      }
+
+      if (isInInput) return;
+
+      if (pendingDigits.current) {
+        if (e.key >= '0' && e.key <= '9') { pendingDigits.current += e.key; return; }
+        const n = parseInt(pendingDigits.current, 10);
+        pendingDigits.current = '';
+        jumpToVerse(n);
+        if (e.key === 'Enter') return;
+        // fall through to also handle the triggering key
+      }
+
+      if (pendingG.current) {
+        pendingG.current = false;
+        if (e.key === 'u') { goToFirstUnfinishedRef.current(); return; }
+        if (e.key === 'h') { navigateDay(-1); return; }
+        if (e.key === 'l') { navigateDay(1); return; }
+        if (e.key === 'g') { smoothScrollTo(0); return; }
+        if (e.key >= '1' && e.key <= '9') { pendingDigits.current = e.key; return; }
+        // unrecognised second key — fall through to handle it normally
+      }
+
+      switch (e.key) {
+        case 'g':
+          pendingG.current = true;
+          break;
+        case 'G':
+          smoothScrollTo(Number.MAX_SAFE_INTEGER);
+          break;
+        case '/':
+          e.preventDefault();
+          if (isMobile) {
+            setMobileSheet(s => s === 'search' ? null : 'search');
+          } else {
+            setRailOpen(true);
+            setRailSearchOpen(s => !s);
+          }
+          break;
+        case '[':
+          navigateDay(-1);
+          break;
+        case ']':
+          navigateDay(1);
+          break;
+        case 't':
+          goToTodayRef.current();
+          break;
+        case 'n':
+          goToNextDayRef.current();
+          break;
+        case 'N':
+          goToPrevDayRef.current();
+          break;
+        case 'm':
+          markCurrentAsReadRef.current();
+          break;
+        case 's':
+          if (isMobile) {
+            setMobileSheet(s => s === 'menu' ? null : 'menu');
+          } else {
+            setSettingsOpen(prev => !prev);
+          }
+          break;
+        case 'c':
+          cycleThemeRef.current();
+          break;
+        case 'h':
+          goToPrevItemRef.current();
+          break;
+        case 'l':
+          goToNextItemRef.current();
+          break;
+        case 'r':
+          toggleReadingModeRef.current();
+          break;
+        case 'j':
+          smoothScrollBy(150);
+          break;
+        case 'k':
+          smoothScrollBy(-150);
+          break;
+        case '?':
+          setShowKeymapHelp(prev => !prev);
+          break;
+      }
+    };
+
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [isMobile]);
 
   // Defer one frame so the panel is in the DOM before attempting focus
   useEffect(() => {
@@ -529,6 +700,12 @@ const App: React.FC = () => {
     const id = requestAnimationFrame(() => searchPanelInputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [railSearchOpen]);
+
+  useEffect(() => {
+    if (!showKeymapHelp) return;
+    const id = requestAnimationFrame(() => keymapModalRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [showKeymapHelp]);
 
   useEffect(() => {
     if (!loading && bibleData) {
@@ -690,6 +867,21 @@ const App: React.FC = () => {
     return null;
   }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
 
+  const prevDayWithPlan = useMemo(() => {
+    if (settings.scheduleMode !== 'daily') return null;
+    try {
+      const schedule = JSON.parse(settings.dailyScheduleJson);
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
+      const idx = dates.indexOf(selectedDate);
+      if (idx === -1) return null;
+      for (let i = idx - 1; i >= 0; i--) {
+        if (schedule[dates[i]]?.trim()) return dates[i];
+      }
+    } catch { /* ignore */ }
+    return null;
+  }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
+
   const calendarDays = useMemo(() => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
@@ -807,10 +999,9 @@ const App: React.FC = () => {
     if (!bibleData) return;
     const id = navStatus.currentItemId || currentScheduleItemId ||
       buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
-    if (!settings.completedTasks.includes(id)) {
-      toggleTask(id);
-      showToast(`已完成：${bibleData.reference}！`);
-    }
+    const wasCompleted = settings.completedTasks.includes(id);
+    toggleTask(id);
+    showToast(wasCompleted ? `已取消：${bibleData.reference}` : `已完成：${bibleData.reference}！`);
   };
 
   const handleExportProgress = () => {
@@ -893,6 +1084,42 @@ const App: React.FC = () => {
     setCurrentViewDate(new Date(y, m - 1, d));
     handleDayClick(nextDayWithPlan);
   };
+
+  const goToPrevDay = () => {
+    if (!prevDayWithPlan) return;
+    const [y, m, d] = prevDayWithPlan.split('-').map(Number);
+    setCurrentViewDate(new Date(y, m - 1, d));
+    handleDayClick(prevDayWithPlan);
+  };
+
+  const goToNextItem = () => {
+    if (!navStatus.nextItem) return;
+    const item = navStatus.nextItem as ScheduleItem;
+    fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id });
+  };
+
+  const goToPrevItem = () => {
+    if (!navStatus.prevItem) return;
+    const item = navStatus.prevItem as ScheduleItem;
+    fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id });
+  };
+
+  const toggleReadingMode = () => {
+    setReadingMode(m => m === 'standard' ? 'book' : 'standard');
+  };
+
+  // Keep action refs current so the keymap handler always calls the latest closures
+  selectedDateRef.current = selectedDate;
+  goToTodayRef.current = goToTodayInPlan;
+  goToFirstUnfinishedRef.current = goToFirstUnfinished;
+  goToNextDayRef.current = goToNextDay;
+  markCurrentAsReadRef.current = markCurrentAsRead;
+  cycleThemeRef.current = cycleTheme;
+  handleDayClickRef.current    = handleDayClick;
+  goToPrevDayRef.current       = goToPrevDay;
+  goToNextItemRef.current      = goToNextItem;
+  goToPrevItemRef.current      = goToPrevItem;
+  toggleReadingModeRef.current = toggleReadingMode;
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
@@ -1027,7 +1254,7 @@ const App: React.FC = () => {
                     {filteredVerses.map((v, i) => {
                       const pv = filteredParallel?.[i];
                       return (
-                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                        <div key={i} data-verse={v.verse} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
                           <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} accent={A} /></div>
@@ -1952,7 +2179,7 @@ const App: React.FC = () => {
                   }}>
                     {filteredVerses.map((v, i) => (
                       <React.Fragment key={i}>
-                        <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                        <div data-verse={v.verse} style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
                           <span style={{
                             fontFamily: F.label,
                             fontSize: Math.round(settings.fontSize * 0.56),
@@ -2341,6 +2568,120 @@ const App: React.FC = () => {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {!isMobile && (
+        <button
+          onClick={() => setShowKeymapHelp(prev => !prev)}
+          title="Keyboard shortcuts (?)"
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 90,
+            width: 36, height: 36, borderRadius: '50%',
+            background: theme.surface, border: `1px solid ${theme.line}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: theme.muted,
+            fontFamily: F.label, fontSize: 15, fontWeight: 600,
+            transition: 'color 0.15s, border-color 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = theme.ink; (e.currentTarget as HTMLButtonElement).style.borderColor = theme.lineStrong; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = theme.muted; (e.currentTarget as HTMLButtonElement).style.borderColor = theme.line; }}
+        >?</button>
+      )}
+
+      {showKeymapHelp && (
+        <div
+          onClick={() => setShowKeymapHelp(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            ref={keymapModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard Shortcuts"
+            tabIndex={-1}
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: theme.surface, border: `1px solid ${theme.line}`,
+              borderRadius: 12, padding: '24px 28px', minWidth: 320,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+              outline: 'none',
+            }}
+          >
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              marginBottom: 16,
+            }}>
+              <span style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink }}>
+                Keyboard Shortcuts
+              </span>
+              <span style={{ fontFamily: F.sans, fontSize: 11, color: theme.muted }}>Esc to close</span>
+            </div>
+
+            {([
+              { section: 'NAVIGATION', rows: [
+                { keys: ['[', ']'],      label: 'Previous / next day' },
+                { keys: ['g→h', 'g→l'], label: 'Prev / next day (chord)' },
+                { keys: ['t'],           label: 'Jump to today' },
+                { keys: ['g→u'],         label: 'First unfinished' },
+                { keys: ['N', 'n'],      label: 'Prev / next unread day' },
+              ]},
+              { section: 'READING', rows: [
+                { keys: ['h', 'l'],     label: 'Prev / next passage' },
+                { keys: ['m'],          label: 'Toggle read / unread' },
+                { keys: ['r'],          label: 'Toggle reading mode' },
+                { keys: ['g→1…N'],      label: 'Jump to verse N' },
+                { keys: ['gg', 'G'],    label: 'Scroll to top / bottom' },
+              ]},
+              { section: 'INTERFACE', rows: [
+                { keys: ['/'],       label: 'Toggle search' },
+                { keys: ['j', 'k'],  label: 'Scroll down / up' },
+                { keys: ['s'],       label: 'Toggle settings' },
+                { keys: ['c'],       label: 'Cycle theme' },
+                { keys: ['Esc'],     label: 'Close panels' },
+                { keys: ['?'],       label: 'This help' },
+              ]},
+            ] as Array<{ section: string; rows: Array<{ keys: string[]; label: string }> }>).map(({ section, rows }) => (
+              <div key={section} style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: theme.muted, marginBottom: 6,
+                }}>{section}</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {rows.map(({ keys, label }) => (
+                      <tr key={label}>
+                        <td style={{ padding: '3px 0', width: 110 }}>
+                          {keys.map((k, i) => (
+                            <React.Fragment key={k}>
+                              {i > 0 && <span style={{ marginRight: 3 }}> </span>}
+                              <kbd style={{
+                                background: theme.pill, border: `1px solid ${theme.line}`,
+                                borderRadius: 3, padding: '1px 6px',
+                                fontFamily: F.label, fontSize: 12, color: theme.ink,
+                              }}>{k}</kbd>
+                            </React.Fragment>
+                          ))}
+                        </td>
+                        <td style={{
+                          padding: '3px 0 3px 8px',
+                          fontFamily: F.sans, fontSize: 12, color: theme.inkSoft,
+                        }}>
+                          {label}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </div>
       )}
