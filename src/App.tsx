@@ -538,6 +538,7 @@ const App: React.FC = () => {
           e.target.isContentEditable);
 
       if (e.key === 'Escape') {
+        pendingG.current = false;
         setRailSearchOpen(false);
         setSettingsOpen(false);
         setMobileSheet(null);
