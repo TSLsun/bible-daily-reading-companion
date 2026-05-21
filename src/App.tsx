@@ -499,6 +499,11 @@ const App: React.FC = () => {
   const goToNextDayRef = useRef<() => void>(() => {});
   const markCurrentAsReadRef = useRef<() => void>(() => {});
   const cycleThemeRef = useRef<() => void>(() => {});
+  const handleDayClickRef      = useRef<(dateKey: string) => void>(() => {});
+  const goToPrevDayRef         = useRef<() => void>(() => {});
+  const goToNextItemRef        = useRef<() => void>(() => {});
+  const goToPrevItemRef        = useRef<() => void>(() => {});
+  const toggleReadingModeRef   = useRef<() => void>(() => {});
 
   const PLAN_YEAR = 2026;
 
@@ -776,6 +781,21 @@ const App: React.FC = () => {
     return null;
   }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
 
+  const prevDayWithPlan = useMemo(() => {
+    if (settings.scheduleMode !== 'daily') return null;
+    try {
+      const schedule = JSON.parse(settings.dailyScheduleJson);
+      const yearPrefix = String(PLAN_YEAR) + '-';
+      const dates = Object.keys(schedule).filter(k => k.startsWith(yearPrefix)).sort();
+      const idx = dates.indexOf(selectedDate);
+      if (idx === -1) return null;
+      for (let i = idx - 1; i >= 0; i--) {
+        if (schedule[dates[i]]?.trim()) return dates[i];
+      }
+    } catch { /* ignore */ }
+    return null;
+  }, [settings.scheduleMode, settings.dailyScheduleJson, selectedDate]);
+
   const calendarDays = useMemo(() => {
     const year = currentViewDate.getFullYear();
     const month = currentViewDate.getMonth();
@@ -893,10 +913,9 @@ const App: React.FC = () => {
     if (!bibleData) return;
     const id = navStatus.currentItemId || currentScheduleItemId ||
       buildVerseId(bibleData.bookCode, bibleData.chapter, bibleData.startVerse, bibleData.endVerse);
-    if (!settings.completedTasks.includes(id)) {
-      toggleTask(id);
-      showToast(`已完成：${bibleData.reference}！`);
-    }
+    const wasCompleted = settings.completedTasks.includes(id);
+    toggleTask(id);
+    showToast(wasCompleted ? `已取消：${bibleData.reference}` : `已完成：${bibleData.reference}！`);
   };
 
   const handleExportProgress = () => {
@@ -980,6 +999,29 @@ const App: React.FC = () => {
     handleDayClick(nextDayWithPlan);
   };
 
+  const goToPrevDay = () => {
+    if (!prevDayWithPlan) return;
+    const [y, m, d] = prevDayWithPlan.split('-').map(Number);
+    setCurrentViewDate(new Date(y, m - 1, d));
+    handleDayClick(prevDayWithPlan);
+  };
+
+  const goToNextItem = () => {
+    if (!navStatus.nextItem) return;
+    const item = navStatus.nextItem as ScheduleItem;
+    fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id });
+  };
+
+  const goToPrevItem = () => {
+    if (!navStatus.prevItem) return;
+    const item = navStatus.prevItem as ScheduleItem;
+    fetchBible({ book: item.book, chapter: item.chapter, startVerse: item.startVerse, endVerse: item.endVerse, label: item.label, scheduleItemId: item.id });
+  };
+
+  const toggleReadingMode = () => {
+    setReadingMode(m => m === 'standard' ? 'book' : 'standard');
+  };
+
   // Keep action refs current so the keymap handler always calls the latest closures
   selectedDateRef.current = selectedDate;
   goToTodayRef.current = goToTodayInPlan;
@@ -987,6 +1029,11 @@ const App: React.FC = () => {
   goToNextDayRef.current = goToNextDay;
   markCurrentAsReadRef.current = markCurrentAsRead;
   cycleThemeRef.current = cycleTheme;
+  handleDayClickRef.current    = handleDayClick;
+  goToPrevDayRef.current       = goToPrevDay;
+  goToNextItemRef.current      = goToNextItem;
+  goToPrevItemRef.current      = goToPrevItem;
+  toggleReadingModeRef.current = toggleReadingMode;
 
   // ── Derived ────────────────────────────────────────────────────────────────
 
