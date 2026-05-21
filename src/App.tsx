@@ -492,6 +492,7 @@ const App: React.FC = () => {
   const mainScrollRef = useRef<HTMLDivElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const searchPanelInputRef = useRef<HTMLInputElement>(null);
+  const keymapModalRef = useRef<HTMLDivElement>(null);
   const selectedDateRef = useRef<string>('');
   const goToTodayRef = useRef<() => void>(() => {});
   const goToFirstUnfinishedRef = useRef<() => void>(() => {});
@@ -603,6 +604,12 @@ const App: React.FC = () => {
     const id = requestAnimationFrame(() => searchPanelInputRef.current?.focus());
     return () => cancelAnimationFrame(id);
   }, [railSearchOpen]);
+
+  useEffect(() => {
+    if (!showKeymapHelp) return;
+    const id = requestAnimationFrame(() => keymapModalRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [showKeymapHelp]);
 
   useEffect(() => {
     if (!loading && bibleData) {
@@ -2437,11 +2444,17 @@ const App: React.FC = () => {
           }}
         >
           <div
+            ref={keymapModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Keyboard Shortcuts"
+            tabIndex={-1}
             onClick={e => e.stopPropagation()}
             style={{
               background: theme.surface, border: `1px solid ${theme.line}`,
               borderRadius: 12, padding: '24px 28px', minWidth: 320,
               boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+              outline: 'none',
             }}
           >
             <div style={{
@@ -2458,7 +2471,7 @@ const App: React.FC = () => {
               { section: 'NAVIGATION', rows: [
                 { keys: ['[', ']'], label: 'Previous / next day' },
                 { keys: ['t'],      label: 'Jump to today' },
-                { keys: ['g', 'u'], label: 'First unfinished' },
+                { keys: ['g→u'],    label: 'First unfinished' },
               ]},
               { section: 'READING', rows: [
                 { keys: ['m'], label: 'Mark current as read' },
