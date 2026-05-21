@@ -2572,6 +2572,25 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {!isMobile && (
+        <button
+          onClick={() => setShowKeymapHelp(prev => !prev)}
+          title="Keyboard shortcuts (?)"
+          style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 90,
+            width: 36, height: 36, borderRadius: '50%',
+            background: theme.surface, border: `1px solid ${theme.line}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: theme.muted,
+            fontFamily: F.label, fontSize: 15, fontWeight: 600,
+            transition: 'color 0.15s, border-color 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = theme.ink; (e.currentTarget as HTMLButtonElement).style.borderColor = theme.lineStrong; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = theme.muted; (e.currentTarget as HTMLButtonElement).style.borderColor = theme.line; }}
+        >?</button>
+      )}
+
       {showKeymapHelp && (
         <div
           onClick={() => setShowKeymapHelp(false)}
