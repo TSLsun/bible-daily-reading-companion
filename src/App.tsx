@@ -536,6 +536,7 @@ const App: React.FC = () => {
       handleDayClickRef.current(iso);
     };
 
+    const pendingDigits = { current: '' };
     const scrollTarget = { current: 0 };
     const scrollAnimating = { current: false };
     const animateScroll = () => {
@@ -549,6 +550,25 @@ const App: React.FC = () => {
       }
       el.scrollTop += diff * 0.15;
       requestAnimationFrame(animateScroll);
+    };
+    const smoothScrollTo = (top: number) => {
+      const el = mainScrollRef.current;
+      if (!el) return;
+      const max = el.scrollHeight - el.clientHeight;
+      scrollTarget.current = Math.max(0, Math.min(max, top));
+      if (!scrollAnimating.current) {
+        scrollAnimating.current = true;
+        requestAnimationFrame(animateScroll);
+      }
+    };
+    const jumpToVerse = (verseNum: number) => {
+      const container = mainScrollRef.current;
+      if (!container) return;
+      const el = container.querySelector(`[data-verse="${verseNum}"]`) as HTMLElement | null;
+      if (!el) return;
+      const containerRect = container.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      smoothScrollTo(elRect.top - containerRect.top + container.scrollTop - 60);
     };
     const smoothScrollBy = (delta: number) => {
       const el = mainScrollRef.current;
@@ -576,6 +596,7 @@ const App: React.FC = () => {
 
       if (e.key === 'Escape') {
         pendingG.current = false;
+        pendingDigits.current = '';
         setRailSearchOpen(false);
         setSettingsOpen(false);
         setMobileSheet(null);
@@ -585,17 +606,31 @@ const App: React.FC = () => {
 
       if (isInInput) return;
 
+      if (pendingDigits.current) {
+        if (e.key >= '0' && e.key <= '9') { pendingDigits.current += e.key; return; }
+        const n = parseInt(pendingDigits.current, 10);
+        pendingDigits.current = '';
+        jumpToVerse(n);
+        if (e.key === 'Enter') return;
+        // fall through to also handle the triggering key
+      }
+
       if (pendingG.current) {
         pendingG.current = false;
         if (e.key === 'u') { goToFirstUnfinishedRef.current(); return; }
         if (e.key === 'h') { navigateDay(-1); return; }
         if (e.key === 'l') { navigateDay(1); return; }
+        if (e.key === 'g') { smoothScrollTo(0); return; }
+        if (e.key >= '1' && e.key <= '9') { pendingDigits.current = e.key; return; }
         // unrecognised second key — fall through to handle it normally
       }
 
       switch (e.key) {
         case 'g':
           pendingG.current = true;
+          break;
+        case 'G':
+          smoothScrollTo(Number.MAX_SAFE_INTEGER);
           break;
         case '/':
           e.preventDefault();
@@ -1219,7 +1254,7 @@ const App: React.FC = () => {
                     {filteredVerses.map((v, i) => {
                       const pv = filteredParallel?.[i];
                       return (
-                        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
+                        <div key={i} data-verse={v.verse} style={{ display: 'flex', gap: 12, alignItems: 'baseline' }}>
                           <span style={{ fontFamily: F.label, fontSize: 10, fontWeight: 600, color: A.base, minWidth: 18, textAlign: 'right', opacity: 0.7, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{v.verse}</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ textAlign: 'justify' }}><VerseText text={v.text} theme={settings.theme} accent={A} /></div>
@@ -2579,9 +2614,11 @@ const App: React.FC = () => {
                 { keys: ['N', 'n'],      label: 'Prev / next unread day' },
               ]},
               { section: 'READING', rows: [
-                { keys: ['h', 'l'],  label: 'Prev / next passage' },
-                { keys: ['m'],       label: 'Toggle read / unread' },
-                { keys: ['r'],       label: 'Toggle reading mode' },
+                { keys: ['h', 'l'],     label: 'Prev / next passage' },
+                { keys: ['m'],          label: 'Toggle read / unread' },
+                { keys: ['r'],          label: 'Toggle reading mode' },
+                { keys: ['g→1…N'],      label: 'Jump to verse N' },
+                { keys: ['gg', 'G'],    label: 'Scroll to top / bottom' },
               ]},
               { section: 'INTERFACE', rows: [
                 { keys: ['/'],       label: 'Toggle search' },
