@@ -520,16 +520,82 @@ const App: React.FC = () => {
   // ── Effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
+    const pendingG = { current: false };
+
+    const navigateDay = (delta: number) => {
+      const d = new Date(selectedDateRef.current);
+      d.setDate(d.getDate() + delta);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      setCurrentViewDate(d);
+      setSelectedDate(iso);
+    };
+
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setRailOpen(true);
-        setRailSearchOpen(true);
+      const isInInput =
+        e.target instanceof HTMLElement &&
+        (e.target.tagName === 'INPUT' ||
+          e.target.tagName === 'TEXTAREA' ||
+          e.target.isContentEditable);
+
+      if (e.key === 'Escape') {
+        setRailSearchOpen(false);
+        setSettingsOpen(false);
+        setMobileSheet(null);
+        setShowKeymapHelp(false);
+        return;
+      }
+
+      if (isInInput) return;
+
+      if (pendingG.current) {
+        pendingG.current = false;
+        if (e.key === 'u') goToFirstUnfinishedRef.current();
+        return;
+      }
+
+      switch (e.key) {
+        case 'g':
+          pendingG.current = true;
+          break;
+        case '/':
+          e.preventDefault();
+          if (isMobile) {
+            setMobileSheet(s => s === 'search' ? null : 'search');
+          } else {
+            setRailOpen(true);
+            setRailSearchOpen(s => !s);
+          }
+          break;
+        case '[':
+          navigateDay(-1);
+          break;
+        case ']':
+          navigateDay(1);
+          break;
+        case 't':
+          goToTodayRef.current();
+          break;
+        case 'n':
+          goToNextDayRef.current();
+          break;
+        case 'm':
+          markCurrentAsReadRef.current();
+          break;
+        case 's':
+          setSettingsOpen(prev => !prev);
+          break;
+        case 'c':
+          cycleThemeRef.current();
+          break;
+        case '?':
+          setShowKeymapHelp(prev => !prev);
+          break;
       }
     };
+
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [isMobile]);
 
   // Defer one frame so the panel is in the DOM before attempting focus
   useEffect(() => {
