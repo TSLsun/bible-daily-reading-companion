@@ -555,7 +555,12 @@ const App: React.FC = () => {
       if (!el) return;
       if (!scrollAnimating.current) scrollTarget.current = el.scrollTop;
       const max = el.scrollHeight - el.clientHeight;
-      scrollTarget.current = Math.max(0, Math.min(max, scrollTarget.current + delta));
+      const cap = el.clientHeight * 0.8;
+      const raw = scrollTarget.current + delta;
+      scrollTarget.current = Math.max(
+        el.scrollTop - cap,
+        Math.min(el.scrollTop + cap, Math.max(0, Math.min(max, raw)))
+      );
       if (!scrollAnimating.current) {
         scrollAnimating.current = true;
         requestAnimationFrame(animateScroll);
@@ -639,10 +644,10 @@ const App: React.FC = () => {
           toggleReadingModeRef.current();
           break;
         case 'j':
-          smoothScrollBy(300);
+          smoothScrollBy(150);
           break;
         case 'k':
-          smoothScrollBy(-300);
+          smoothScrollBy(-150);
           break;
         case '?':
           setShowKeymapHelp(prev => !prev);
