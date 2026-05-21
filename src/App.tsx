@@ -2179,7 +2179,7 @@ const App: React.FC = () => {
                   }}>
                     {filteredVerses.map((v, i) => (
                       <React.Fragment key={i}>
-                        <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
+                        <div data-verse={v.verse} style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
                           <span style={{
                             fontFamily: F.label,
                             fontSize: Math.round(settings.fontSize * 0.56),
