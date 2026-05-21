@@ -2541,20 +2541,24 @@ const App: React.FC = () => {
 
             {([
               { section: 'NAVIGATION', rows: [
-                { keys: ['[', ']'], label: 'Previous / next day' },
-                { keys: ['t'],      label: 'Jump to today' },
-                { keys: ['g→u'],    label: 'First unfinished' },
+                { keys: ['[', ']'],      label: 'Previous / next day' },
+                { keys: ['g→h', 'g→l'], label: 'Prev / next day (chord)' },
+                { keys: ['t'],           label: 'Jump to today' },
+                { keys: ['g→u'],         label: 'First unfinished' },
+                { keys: ['N', 'n'],      label: 'Prev / next unread day' },
               ]},
               { section: 'READING', rows: [
-                { keys: ['m'], label: 'Mark current as read' },
-                { keys: ['n'], label: 'Next unread passage' },
+                { keys: ['h', 'l'],  label: 'Prev / next passage' },
+                { keys: ['m'],       label: 'Toggle read / unread' },
+                { keys: ['r'],       label: 'Toggle reading mode' },
               ]},
               { section: 'INTERFACE', rows: [
-                { keys: ['/'],   label: 'Toggle search' },
-                { keys: ['s'],   label: 'Toggle settings' },
-                { keys: ['c'],   label: 'Cycle theme' },
-                { keys: ['Esc'], label: 'Close panels' },
-                { keys: ['?'],   label: 'This help' },
+                { keys: ['/'],       label: 'Toggle search' },
+                { keys: ['j', 'k'],  label: 'Scroll down / up' },
+                { keys: ['s'],       label: 'Toggle settings' },
+                { keys: ['c'],       label: 'Cycle theme' },
+                { keys: ['Esc'],     label: 'Close panels' },
+                { keys: ['?'],       label: 'This help' },
               ]},
             ] as Array<{ section: string; rows: Array<{ keys: string[]; label: string }> }>).map(({ section, rows }) => (
               <div key={section} style={{ marginBottom: 14 }}>
