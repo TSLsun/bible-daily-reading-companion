@@ -485,7 +485,6 @@ const App: React.FC = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [mobileSheet, setMobileSheet] = useState<'plan' | 'calendar' | 'menu' | 'search' | null>(null);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [showKeymapHelp, setShowKeymapHelp] = useState(false);
 
   // Refs
@@ -2424,6 +2423,89 @@ const App: React.FC = () => {
                 })}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showKeymapHelp && (
+        <div
+          onClick={() => setShowKeymapHelp(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: theme.surface, border: `1px solid ${theme.line}`,
+              borderRadius: 12, padding: '24px 28px', minWidth: 320,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+            }}
+          >
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              marginBottom: 16,
+            }}>
+              <span style={{ fontFamily: F.serif, fontSize: 15, fontWeight: 600, color: theme.ink }}>
+                Keyboard Shortcuts
+              </span>
+              <span style={{ fontFamily: F.sans, fontSize: 11, color: theme.muted }}>Esc to close</span>
+            </div>
+
+            {([
+              { section: 'NAVIGATION', rows: [
+                { keys: ['[', ']'], label: 'Previous / next day' },
+                { keys: ['t'],      label: 'Jump to today' },
+                { keys: ['g', 'u'], label: 'First unfinished' },
+              ]},
+              { section: 'READING', rows: [
+                { keys: ['m'], label: 'Mark current as read' },
+                { keys: ['n'], label: 'Next unread passage' },
+              ]},
+              { section: 'INTERFACE', rows: [
+                { keys: ['/'],   label: 'Toggle search' },
+                { keys: ['s'],   label: 'Toggle settings' },
+                { keys: ['c'],   label: 'Cycle theme' },
+                { keys: ['Esc'], label: 'Close panels' },
+                { keys: ['?'],   label: 'This help' },
+              ]},
+            ] as Array<{ section: string; rows: Array<{ keys: string[]; label: string }> }>).map(({ section, rows }) => (
+              <div key={section} style={{ marginBottom: 14 }}>
+                <div style={{
+                  fontFamily: F.label, fontSize: 10, fontWeight: 600,
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: theme.muted, marginBottom: 6,
+                }}>{section}</div>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    {rows.map(({ keys, label }) => (
+                      <tr key={label}>
+                        <td style={{ padding: '3px 0', width: 110 }}>
+                          {keys.map((k, i) => (
+                            <React.Fragment key={k}>
+                              {i > 0 && <span style={{ marginRight: 3 }}> </span>}
+                              <kbd style={{
+                                background: theme.pill, border: `1px solid ${theme.line}`,
+                                borderRadius: 3, padding: '1px 6px',
+                                fontFamily: F.label, fontSize: 12, color: theme.ink,
+                              }}>{k}</kbd>
+                            </React.Fragment>
+                          ))}
+                        </td>
+                        <td style={{
+                          padding: '3px 0 3px 8px',
+                          fontFamily: F.sans, fontSize: 12, color: theme.inkSoft,
+                        }}>
+                          {label}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </div>
       )}
