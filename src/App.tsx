@@ -523,7 +523,8 @@ const App: React.FC = () => {
     const pendingG = { current: false };
 
     const navigateDay = (delta: number) => {
-      const d = new Date(selectedDateRef.current);
+      const [yr, mo, dy] = selectedDateRef.current.split('-').map(Number);
+      const d = new Date(yr, mo - 1, dy);
       d.setDate(d.getDate() + delta);
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       setCurrentViewDate(d);
@@ -550,8 +551,8 @@ const App: React.FC = () => {
 
       if (pendingG.current) {
         pendingG.current = false;
-        if (e.key === 'u') goToFirstUnfinishedRef.current();
-        return;
+        if (e.key === 'u') { goToFirstUnfinishedRef.current(); return; }
+        // unrecognised second key — fall through to handle it normally
       }
 
       switch (e.key) {
@@ -583,7 +584,11 @@ const App: React.FC = () => {
           markCurrentAsReadRef.current();
           break;
         case 's':
-          setSettingsOpen(prev => !prev);
+          if (isMobile) {
+            setMobileSheet(s => s === 'menu' ? null : 'menu');
+          } else {
+            setSettingsOpen(prev => !prev);
+          }
           break;
         case 'c':
           cycleThemeRef.current();
