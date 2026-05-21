@@ -531,9 +531,9 @@ const App: React.FC = () => {
       const [yr, mo, dy] = selectedDateRef.current.split('-').map(Number);
       const d = new Date(yr, mo - 1, dy);
       d.setDate(d.getDate() + delta);
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       setCurrentViewDate(d);
-      setSelectedDate(iso);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      handleDayClickRef.current(iso);
     };
 
     const handler = (e: KeyboardEvent) => {
@@ -557,6 +557,8 @@ const App: React.FC = () => {
       if (pendingG.current) {
         pendingG.current = false;
         if (e.key === 'u') { goToFirstUnfinishedRef.current(); return; }
+        if (e.key === 'h') { navigateDay(-1); return; }
+        if (e.key === 'l') { navigateDay(1); return; }
         // unrecognised second key — fall through to handle it normally
       }
 
@@ -585,6 +587,9 @@ const App: React.FC = () => {
         case 'n':
           goToNextDayRef.current();
           break;
+        case 'N':
+          goToPrevDayRef.current();
+          break;
         case 'm':
           markCurrentAsReadRef.current();
           break;
@@ -597,6 +602,21 @@ const App: React.FC = () => {
           break;
         case 'c':
           cycleThemeRef.current();
+          break;
+        case 'h':
+          goToPrevItemRef.current();
+          break;
+        case 'l':
+          goToNextItemRef.current();
+          break;
+        case 'r':
+          toggleReadingModeRef.current();
+          break;
+        case 'j':
+          mainScrollRef.current?.scrollBy({ top: 300, behavior: 'smooth' });
+          break;
+        case 'k':
+          mainScrollRef.current?.scrollBy({ top: -300, behavior: 'smooth' });
           break;
         case '?':
           setShowKeymapHelp(prev => !prev);
