@@ -536,6 +536,32 @@ const App: React.FC = () => {
       handleDayClickRef.current(iso);
     };
 
+    const scrollTarget = { current: 0 };
+    const scrollAnimating = { current: false };
+    const animateScroll = () => {
+      const el = mainScrollRef.current;
+      if (!el) { scrollAnimating.current = false; return; }
+      const diff = scrollTarget.current - el.scrollTop;
+      if (Math.abs(diff) < 0.5) {
+        el.scrollTop = scrollTarget.current;
+        scrollAnimating.current = false;
+        return;
+      }
+      el.scrollTop += diff * 0.15;
+      requestAnimationFrame(animateScroll);
+    };
+    const smoothScrollBy = (delta: number) => {
+      const el = mainScrollRef.current;
+      if (!el) return;
+      if (!scrollAnimating.current) scrollTarget.current = el.scrollTop;
+      const max = el.scrollHeight - el.clientHeight;
+      scrollTarget.current = Math.max(0, Math.min(max, scrollTarget.current + delta));
+      if (!scrollAnimating.current) {
+        scrollAnimating.current = true;
+        requestAnimationFrame(animateScroll);
+      }
+    };
+
     const handler = (e: KeyboardEvent) => {
       const isInInput =
         e.target instanceof HTMLElement &&
@@ -613,10 +639,10 @@ const App: React.FC = () => {
           toggleReadingModeRef.current();
           break;
         case 'j':
-          mainScrollRef.current?.scrollBy({ top: 300, behavior: 'smooth' });
+          smoothScrollBy(300);
           break;
         case 'k':
-          mainScrollRef.current?.scrollBy({ top: -300, behavior: 'smooth' });
+          smoothScrollBy(-300);
           break;
         case '?':
           setShowKeymapHelp(prev => !prev);
