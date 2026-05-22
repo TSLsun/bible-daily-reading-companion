@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.0.1...bible-companion-v2.1.0) (2026-05-22)
+
+
+### Features
+
+* custom scroll bar overlay with top/bottom nav (mobile + desktop) ([#24](https://github.com/TSLsun/bible-daily-reading-companion/issues/24)) ([af97b4f](https://github.com/TSLsun/bible-daily-reading-companion/commit/af97b4fa8b9c59f36ed13317c4baa21e6e0c8078))
+* SearchPanel — book grid, chapter picker, and keyword search ([#20](https://github.com/TSLsun/bible-daily-reading-companion/issues/20)) ([ce1bc8d](https://github.com/TSLsun/bible-daily-reading-companion/commit/ce1bc8d9606a7b6beec40992e9e4a127510653dc))
+* vim-inspired keyboard shortcuts with ? help modal ([#23](https://github.com/TSLsun/bible-daily-reading-companion/issues/23)) ([cb5c1ea](https://github.com/TSLsun/bible-daily-reading-companion/commit/cb5c1ea6f0519dc85cd57d4e380330c8ff02e703))
+
+
+### Bug Fixes
+
+* remove duplicate settings button from mobile header ([#22](https://github.com/TSLsun/bible-daily-reading-companion/issues/22)) ([3d0f8ee](https://github.com/TSLsun/bible-daily-reading-companion/commit/3d0f8ee9299ee9e24a4fe4764b359b8db64c87e2))
+
 ## [2.0.1](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.0.0...bible-companion-v2.0.1) (2026-05-16)
 
 
