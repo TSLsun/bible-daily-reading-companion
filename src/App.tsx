@@ -511,16 +511,21 @@ const ScrollBarOverlay: React.FC<{
     clearTimeout(hideTimer.current);
   };
   const onDrag = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!dragState.current || !trackRef.current || !scrollRef.current) return;
+    if (!dragState.current || !scrollRef.current) return;
     const el = scrollRef.current;
-    const trackClientH = trackRef.current.clientHeight;
-    const tH = Math.max(24, (el.clientHeight / el.scrollHeight) * trackClientH);
     el.scrollTop = dragState.current.startScrollTop +
-      (e.clientY - dragState.current.startY) * (el.scrollHeight - el.clientHeight) / (trackClientH - tH);
+      (e.clientY - dragState.current.startY) * (el.scrollHeight - el.clientHeight) / (trackH - thumbH);
   };
   const endDrag = () => {
     dragState.current = null;
     hideTimer.current = setTimeout(() => setVisible(false), 2000);
+  };
+
+  const navBtnStyle: React.CSSProperties = {
+    appearance: 'none', border: 'none', cursor: 'pointer', padding: 0,
+    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+    background: theme.surface, color: theme.ink, opacity: 0.85,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 
   return (
@@ -534,12 +539,7 @@ const ScrollBarOverlay: React.FC<{
     }}>
       <button
         onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{
-          appearance: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-          background: theme.surface, color: theme.ink, opacity: 0.85,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
+        style={navBtnStyle}
       >
         <ChevronUp size={12} />
       </button>
@@ -566,12 +566,7 @@ const ScrollBarOverlay: React.FC<{
       </div>
       <button
         onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }}
-        style={{
-          appearance: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-          background: theme.surface, color: theme.ink, opacity: 0.85,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
+        style={navBtnStyle}
       >
         <ChevronDown size={12} />
       </button>
