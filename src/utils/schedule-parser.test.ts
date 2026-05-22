@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseScheduleLine, getDayPlan } from './schedule-parser';
+import { parseScheduleLine, getDayPlan, buildVerseId } from './schedule-parser';
 
 describe('parseScheduleLine', () => {
   it('parses a single chapter', () => {
@@ -55,6 +55,36 @@ describe('parseScheduleLine', () => {
     const result = parseScheduleLine('創世記 1');
     expect(result).toHaveLength(1);
     expect(result[0].book).toBe('Ge');
+  });
+
+  it('returns empty array when no chapter number is present', () => {
+    expect(parseScheduleLine('太')).toHaveLength(0);
+  });
+
+  it('parses chapter-only when colon has no verse digits after it', () => {
+    const result = parseScheduleLine('太 5:');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ chapter: 5, id: 'Mt5' });
+    expect(result[0].startVerse).toBeUndefined();
+    expect(result[0].endVerse).toBeUndefined();
+  });
+});
+
+describe('buildVerseId', () => {
+  it('emits no verse suffix when no verse args are given', () => {
+    expect(buildVerseId('Mt', 5)).toBe('Mt5');
+  });
+
+  it('emits a range when startVerse and endVerse differ', () => {
+    expect(buildVerseId('Ps', 119, 1, 16)).toBe('Ps119:1-16');
+  });
+
+  it('omits the dash when startVerse and endVerse are equal', () => {
+    expect(buildVerseId('Mt', 5, 3, 3)).toBe('Mt5:3');
+  });
+
+  it('emits only startVerse when endVerse is undefined', () => {
+    expect(buildVerseId('Mt', 5, 1)).toBe('Mt5:1');
   });
 });
 
