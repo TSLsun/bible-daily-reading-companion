@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search, CheckCircle2, AlertCircle, BookOpen,
   Sun, Moon, Coffee, X, PartyPopper, ChevronUp,
@@ -443,6 +443,157 @@ const SearchPanel: React.FC<{
     </div>
   );
 };
+
+// ─── SCROLL BAR OVERLAY ──────────────────────────────────────────────────────
+const ScrollBarOverlay: React.FC<{
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  theme: TK;
+}> = ({ scrollRef, theme }) => {
+  const [visible, setVisible] = useState(false);
+  const [canScroll, setCanScroll] = useState(false);
+  const [thumbRatio, setThumbRatio] = useState(1);
+  const [thumbOffset, setThumbOffset] = useState(0);
+  const [trackH, setTrackH] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const dragState = useRef<{ startY: number; startScrollTop: number } | null>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const overflow = scrollHeight > clientHeight;
+      setCanScroll(overflow);
+      if (!overflow) return;
+      setThumbRatio(clientHeight / scrollHeight);
+      const denom = scrollHeight - clientHeight;
+      setThumbOffset(denom > 0 ? scrollTop / denom : 0);
+    };
+    const onScroll = () => {
+      update();
+      setVisible(true);
+      clearTimeout(hideTimer.current);
+      if (!dragState.current) {
+        hideTimer.current = setTimeout(() => setVisible(false), 2000);
+      }
+    };
+    update();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+      clearTimeout(hideTimer.current);
+    };
+  }, [scrollRef]);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    setTrackH(track.clientHeight);
+    const ro = new ResizeObserver(() => setTrackH(track.clientHeight));
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [canScroll]);
+
+  if (!canScroll) return null;
+
+  const thumbH = trackH > 0 ? Math.max(24, thumbRatio * trackH) : 24;
+  const thumbTop = trackH > 0 ? thumbOffset * (trackH - thumbH) : 0;
+
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (!scrollRef.current) return;
+    dragState.current = { startY: e.clientY, startScrollTop: scrollRef.current.scrollTop };
+    clearTimeout(hideTimer.current);
+  };
+  const onDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current || !trackRef.current || !scrollRef.current) return;
+    const el = scrollRef.current;
+    const trackClientH = trackRef.current.clientHeight;
+    const tH = Math.max(24, (el.clientHeight / el.scrollHeight) * trackClientH);
+    el.scrollTop = dragState.current.startScrollTop +
+      (e.clientY - dragState.current.startY) * (el.scrollHeight - el.clientHeight) / (trackClientH - tH);
+  };
+  const endDrag = () => {
+    dragState.current = null;
+    hideTimer.current = setTimeout(() => setVisible(false), 2000);
+  };
+
+  return (
+    <div style={{
+      position: 'absolute', right: 2, top: 0, bottom: 0, width: 20,
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      padding: '4px 0', zIndex: 10,
+      opacity: visible ? 1 : 0,
+      transition: 'opacity 0.2s ease',
+      pointerEvents: visible ? 'auto' : 'none',
+    }}>
+      <button
+        onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+        style={{
+          appearance: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+          background: theme.surface, color: theme.ink, opacity: 0.85,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <ChevronUp size={12} />
+      </button>
+      <div
+        ref={trackRef}
+        style={{
+          flex: 1, width: 4, borderRadius: 2,
+          background: theme.faint, opacity: 0.6,
+          position: 'relative', margin: '2px auto',
+        }}
+      >
+        <div
+          onPointerDown={startDrag}
+          onPointerMove={onDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          style={{
+            position: 'absolute', left: 0, right: 0,
+            top: thumbTop, height: thumbH,
+            background: theme.inkSoft, borderRadius: 4,
+            cursor: 'grab', touchAction: 'none',
+          }}
+        />
+      </div>
+      <button
+        onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }}
+        style={{
+          appearance: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+          background: theme.surface, color: theme.ink, opacity: 0.85,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        <ChevronDown size={12} />
+      </button>
+    </div>
+  );
+};
+
+// ─── SCROLLABLE PANE ─────────────────────────────────────────────────────────
+const ScrollablePane: React.FC<{
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  theme: TK;
+  style?: React.CSSProperties;
+  innerStyle?: React.CSSProperties;
+  children: React.ReactNode;
+}> = ({ scrollRef, theme, style, innerStyle, children }) => (
+  <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', ...style }}>
+    <div ref={scrollRef} className="scroll-hide" style={{ flex: 1, overflowY: 'auto', minHeight: 0, ...innerStyle }}>
+      {children}
+    </div>
+    <ScrollBarOverlay scrollRef={scrollRef} theme={theme} />
+  </div>
+);
 
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
@@ -1204,7 +1355,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Mobile reading area */}
-          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 130px' }}>
+          <ScrollablePane scrollRef={mainScrollRef} theme={theme} style={{ flex: 1 }} innerStyle={{ padding: '20px 20px 130px' }}>
             {loading ? (
               <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
                 <BookOpen size={40} style={{ color: A.base, opacity: 0.25 }} />
@@ -1329,7 +1480,7 @@ const App: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </ScrollablePane>
 
           {/* Floating bottom tab bar */}
           <div style={{
@@ -2099,7 +2250,7 @@ const App: React.FC = () => {
           </div>
 
           {/* SCROLL CONTAINER */}
-          <div ref={mainScrollRef} style={{ flex: 1, overflowY: 'auto' }}>
+          <ScrollablePane scrollRef={mainScrollRef} theme={theme} style={{ flex: 1 }}>
             {loading ? (
               <div style={{
                 height: '100%', display: 'flex', flexDirection: 'column',
@@ -2342,7 +2493,7 @@ const App: React.FC = () => {
                 </div>
               </footer>
             )}
-          </div>
+          </ScrollablePane>
         </main>
       </div>
       )}
