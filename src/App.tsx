@@ -978,7 +978,7 @@ const App: React.FC = () => {
   const handleEnableSync = useCallback(() => {
     updateSetting('syncId', crypto.randomUUID());
     showToast('同步已啟用');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- updateSetting and showToast are plain functions (not useCallback), adding them would cause re-creation every render
 
   const handleDisableSync = useCallback(() => {
     updateSetting('syncId', null);
@@ -986,7 +986,7 @@ const App: React.FC = () => {
     setSyncError('');
     setSyncShowQr(false);
     showToast('同步已停用');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- updateSetting and showToast are plain functions (not useCallback), adding them would cause re-creation every render
 
   const handlePull = useCallback(async (syncId: string) => {
     setSyncStatus('syncing');
@@ -1444,7 +1444,7 @@ const App: React.FC = () => {
             {settings.syncId}
           </span>
           <button
-            onClick={() => navigator.clipboard.writeText(settings.syncId!).then(() => showToast('已複製'))}
+            onClick={() => void navigator.clipboard.writeText(settings.syncId!).then(() => showToast('已複製')).catch(() => showToast('複製失敗'))}
             style={{ appearance: 'none', border: `1px solid ${theme.lineStrong}`, cursor: 'pointer', padding: '3px 8px', borderRadius: 6, background: 'transparent', color: theme.muted, fontFamily: F.label, fontSize: 10 }}
           >複製</button>
           <button
