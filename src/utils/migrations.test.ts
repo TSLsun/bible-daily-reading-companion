@@ -72,4 +72,16 @@ describe('migrateCompletedTasks', () => {
     expect(result).toContain('2026-01-01:Mt2');
     expect(result).toContain('2026-01-01:Mt3');
   });
+
+  it('upgrades v1 bare IDs for a chapter range', () => {
+    const sched = { '2026-01-10': '創 1-3' };
+    const result = migrateCompletedTasks(['Ge1', 'Ge2', 'Ge3'], sched);
+    expect(result).toEqual(['2026-01-10:Ge1', '2026-01-10:Ge2', '2026-01-10:Ge3']);
+  });
+
+  it('upgrades v1 bare IDs for a single verse', () => {
+    const sched = { '2026-02-01': '詩 1:1' };
+    const result = migrateCompletedTasks(['Ps1:1'], sched);
+    expect(result).toEqual(['2026-02-01:Ps1:1']);
+  });
 });
