@@ -976,17 +976,26 @@ const App: React.FC = () => {
   };
 
   const handleEnableSync = useCallback(() => {
-    updateSetting('syncId', crypto.randomUUID());
+    const id = crypto.randomUUID();
+    setSettings(prev => {
+      const next = { ...prev, syncId: id };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
     showToast('同步已啟用');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- updateSetting and showToast are plain functions (not useCallback), adding them would cause re-creation every render
+  }, []);
 
   const handleDisableSync = useCallback(() => {
-    updateSetting('syncId', null);
+    setSettings(prev => {
+      const next = { ...prev, syncId: null };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
     setSyncStatus('idle');
     setSyncError('');
     setSyncShowQr(false);
     showToast('同步已停用');
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- updateSetting and showToast are plain functions (not useCallback), adding them would cause re-creation every render
+  }, []);
 
   const handlePull = useCallback(async (syncId: string) => {
     setSyncStatus('syncing');
