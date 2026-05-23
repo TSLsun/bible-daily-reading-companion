@@ -22,6 +22,15 @@ import { pullSync, pushSync, WORKER_URL } from './utils/sync';
 
 declare const __APP_VERSION__: string;
 
+function generateUUID(): string {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 
 type TK = {
@@ -894,7 +903,7 @@ const App: React.FC = () => {
         }
         setSettings(prev => {
           const next = { ...prev, ...parsed };
-          if (!next.deviceId) next.deviceId = crypto.randomUUID();
+          if (!next.deviceId) next.deviceId = generateUUID();
           localStorage.setItem('bible_settings', JSON.stringify(next));
           return next;
         });
@@ -904,7 +913,7 @@ const App: React.FC = () => {
     }
     setSettings(prev => {
       if (prev.deviceId) return prev;
-      const next = { ...prev, deviceId: crypto.randomUUID() };
+      const next = { ...prev, deviceId: generateUUID() };
       localStorage.setItem('bible_settings', JSON.stringify(next));
       return next;
     });
@@ -976,7 +985,7 @@ const App: React.FC = () => {
   };
 
   const handleEnableSync = useCallback(() => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setSettings(prev => {
       const next = { ...prev, syncId: id };
       localStorage.setItem('bible_settings', JSON.stringify(next));
