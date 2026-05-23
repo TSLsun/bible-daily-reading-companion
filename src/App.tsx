@@ -1003,6 +1003,12 @@ const App: React.FC = () => {
       });
       if (needsReconciliation) {
         await pushSync(syncId, settings.deviceId, mergedTasks, WORKER_URL);
+        const reconciledAt = new Date().toISOString();
+        setSettings(prev => {
+          const next = { ...prev, lastSyncedAt: reconciledAt };
+          localStorage.setItem('bible_settings', JSON.stringify(next));
+          return next;
+        });
       }
       setSyncStatus('idle');
       showToast('拉取完成');
@@ -1037,6 +1043,8 @@ const App: React.FC = () => {
   const handleImportSyncId = useCallback((id: string) => {
     const trimmed = id.trim();
     if (!trimmed) return;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(trimmed)) { showToast('無效的同步 ID', 'error'); return; }
     updateSetting('syncId', trimmed);
     setSyncShowIdInput(false);
     setSyncIdInput('');
