@@ -1054,11 +1054,15 @@ const App: React.FC = () => {
     if (!trimmed) return;
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_RE.test(trimmed)) { showToast('無效的同步 ID', 'error'); return; }
-    updateSetting('syncId', trimmed);
+    setSettings(prev => {
+      const next = { ...prev, syncId: trimmed };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
     setSyncShowIdInput(false);
     setSyncIdInput('');
     handlePull(trimmed);
-  }, [handlePull]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [handlePull]);
 
   const showToast = (message: string, type = 'success') => {
     setToast({ show: true, message, type });
