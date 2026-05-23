@@ -29,3 +29,56 @@ export function kvMapToFlat(map: Record<string, string[]>): string[] {
 export function mergeTasks(a: string[], b: string[]): string[] {
   return [...new Set([...a, ...b])].sort();
 }
+
+export async function pullSync(
+  syncId: string,
+  deviceId: string,
+  localTasks: string[],
+  workerUrl: string = WORKER_URL
+): Promise<{ mergedTasks: string[]; needsReconciliation: boolean }> {
+  const res = await fetch(`${workerUrl}/sync/${syncId}`);
+
+  if (res.status === 404) {
+    return {
+      mergedTasks: localTasks,
+      needsReconciliation: localTasks.length > 0,
+    };
+  }
+
+  if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
+
+  const remote = await res.json() as KvSyncData;
+  const remoteTasks = kvMapToFlat(remote.completedTasks);
+  const mergedTasks = mergeTasks(localTasks, remoteTasks);
+
+  const needsReconciliation =
+    mergedTasks.length > remoteTasks.length &&
+    remote.lastDeviceId !== deviceId;
+
+  return { mergedTasks, needsReconciliation };
+}
+
+export async function pushSync(
+  syncId: string,
+  deviceId: string,
+  localTasks: string[],
+  workerUrl: string = WORKER_URL
+): Promise<string[]> {
+  const body: KvSyncData = {
+    version: 1,
+    completedTasks: flatToKvMap(localTasks),
+    updatedAt: new Date().toISOString(),
+    lastDeviceId: deviceId,
+  };
+
+  const res = await fetch(`${workerUrl}/sync/${syncId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
+
+  const merged = await res.json() as KvSyncData;
+  return kvMapToFlat(merged.completedTasks);
+}
