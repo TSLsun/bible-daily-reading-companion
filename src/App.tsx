@@ -607,6 +607,9 @@ const App: React.FC = () => {
     secondaryVersion: null,
     scheduleHash: "",
     fontStyle: 'serif',
+    syncId: null,
+    deviceId: '',
+    lastSyncedAt: null,
   });
 
   const [migrationInput, setMigrationInput] = useState('');
@@ -884,6 +887,7 @@ const App: React.FC = () => {
         }
         setSettings(prev => {
           const next = { ...prev, ...parsed };
+          if (!next.deviceId) next.deviceId = crypto.randomUUID();
           localStorage.setItem('bible_settings', JSON.stringify(next));
           return next;
         });
@@ -891,6 +895,12 @@ const App: React.FC = () => {
         console.error('Failed to load settings');
       }
     }
+    setSettings(prev => {
+      if (prev.deviceId) return prev;
+      const next = { ...prev, deviceId: crypto.randomUUID() };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
     setSettingsInitialized(true);
   }, []);
 
