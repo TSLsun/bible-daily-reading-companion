@@ -1396,7 +1396,7 @@ const App: React.FC = () => {
 
   // ── SyncSection ────────────────────────────────────────────────────────────
 
-  const SyncSection: React.FC = () => {
+  const syncSection = (() => {
     const labelStyle: React.CSSProperties = {
       fontFamily: F.label, fontSize: 9, fontWeight: 600,
       letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
@@ -1513,7 +1513,7 @@ const App: React.FC = () => {
         </div>
       </div>
     );
-  };
+  })();
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1962,7 +1962,7 @@ const App: React.FC = () => {
 
                   <div style={{ height: 1, background: theme.line, margin: '14px 0 14px' }} />
                   <div style={{ padding: '0 0 4px' }}>
-                    <SyncSection />
+                    {syncSection}
                   </div>
 
                   <div style={{ height: 1, background: theme.line, margin: '14px 0 10px' }} />
@@ -2477,7 +2477,7 @@ const App: React.FC = () => {
 
                   <div style={{ height: 1, background: theme.line, margin: '6px 6px 8px' }} />
                   <div style={{ padding: '0 8px 8px' }}>
-                    <SyncSection />
+                    {syncSection}
                   </div>
 
                   <div style={{ height: 1, background: theme.line, margin: '6px 6px 2px' }} />
