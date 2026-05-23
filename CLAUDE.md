@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repo.
 
 ## Project Overview
 
-A single-page React + TypeScript app (Vite) for daily Bible reading, targeted at Traditional Chinese users. The 2026 reading plan is hardcoded in `constants.tsx`. There is no backend — Bible verses are fetched live from the [FHL API](https://bible.fhl.net). All user state is persisted in `localStorage`.
+Single-page React + TypeScript app (Vite) for daily Bible reading, targeted at Traditional Chinese users. 2026 reading plan hardcoded in `constants.tsx`. No backend — verses fetched live from [FHL API](https://bible.fhl.net). All user state persisted in `localStorage`.
 
 ## Commands
 
@@ -17,7 +17,7 @@ npm run test      # Run vitest test suite
 npm run preview   # Preview production build locally
 ```
 
-The pre-commit hook runs `lint-staged` (ESLint with autofix on staged `.ts`/`.tsx` files).
+Pre-commit hook runs `lint-staged` (ESLint with autofix on staged `.ts`/`.tsx` files).
 
 **After every implementation, always run:**
 ```bash
@@ -28,55 +28,55 @@ npm run build     # tsc + vite build must succeed
 
 ## Architecture
 
-The codebase is intentionally minimal — nearly all UI and business logic lives in a single file:
+Intentionally minimal — nearly all UI and business logic in one file:
 
 | File | Role |
 |---|---|
-| `App.tsx` | Entire application: state, all React components, Bible fetch logic, schedule parsing, design tokens |
+| `App.tsx` | Entire app: state, all React components, Bible fetch logic, schedule parsing, design tokens |
 | `constants.tsx` | `BIBLE_BOOKS` (Chinese→API code map), `BIBLE_ALIASES` (shorthand), `FALLBACK_VERSIONS` (translation list), `DEFAULT_DAILY_SCHEDULE` (full 2026 plan) |
 | `types.ts` | All TypeScript interfaces (`AppSettings`, `BibleData`, `ScheduleItem`, etc.) |
 | `index.tsx` | React root mount |
-| `index.html` | Loads Tailwind CSS via CDN, Google Fonts (Noto Serif TC, Noto Sans TC, Inter), and an importmap for ESM dev |
+| `index.html` | Loads Tailwind CSS via CDN, Google Fonts (Noto Serif TC, Noto Sans TC, Inter), importmap for ESM dev |
 | `vite.config.ts` | Sets `base` to `/bible-daily-reading-companion`, injects `__APP_VERSION__` global |
-| `src/utils/` | Pure functions extracted from App.tsx: `bible-lookup.ts`, `migrations.ts`, `schedule-parser.ts`, each with a co-located `.test.ts` file (35 tests total, run with vitest) |
+| `src/utils/` | Pure functions extracted from App.tsx: `bible-lookup.ts`, `migrations.ts`, `schedule-parser.ts`, each with co-located `.test.ts` (35 tests total, vitest) |
 
 ## Key Concepts
 
 ### Schedule Item ID Format
-Completed-reading tracking uses a three-generation ID format. The current format (v3) is:
+Completed-reading tracking uses three-generation ID format. Current format (v3):
 ```
 YYYY-MM-DD:BookCode[Chapter][:<startVerse>-<endVerse>]
 # e.g.  2026-01-01:Mt1   or   2026-04-29:Ps119:1-16
 ```
-On startup, `App.tsx` migrates legacy v1 (bare IDs like `Mt1`) and v2 (`MM-DD:Mt1`) records stored in `localStorage` to the v3 format. The `PLAN_YEAR` constant (currently `2026`) controls which year the calendar defaults to.
+On startup, `App.tsx` migrates legacy v1 (bare IDs like `Mt1`) and v2 (`MM-DD:Mt1`) records from `localStorage` to v3. `PLAN_YEAR` constant (currently `2026`) controls calendar default year.
 
 ### Bible API
-Verses are fetched from `https://bible.fhl.net/json/qsb.php?qstr=<BookCode><Chapter>&version=<ver>&strong=0&gb=0`. The response is **Big5-encoded**, so it must be decoded with `new TextDecoder("big5")` before `JSON.parse`.
+Verses fetched from `https://bible.fhl.net/json/qsb.php?qstr=<BookCode><Chapter>&version=<ver>&strong=0&gb=0`. Response is **Big5-encoded** — must decode with `new TextDecoder("big5")` before `JSON.parse`.
 
-Verse text from the API may contain inline HTML tags (`<h2>`, `<h3>`, `<subheading>`, `<u>`, `<br>`, and CSS classes `.red`/`.explain`). The `VerseText` component in `App.tsx` handles rendering all of these.
+Verse text may contain inline HTML tags (`<h2>`, `<h3>`, `<subheading>`, `<u>`, `<br>`, CSS classes `.red`/`.explain`). `VerseText` component in `App.tsx` handles rendering.
 
 ### Book Name Lookup
-`BIBLE_BOOKS` maps full Traditional Chinese book names to API codes. `BIBLE_ALIASES` maps shorthand (e.g., `太` → `馬太福音`). **Multi-character aliases must be ordered before single-character ones** in `BIBLE_ALIASES` to prevent false prefix matches — the `findBookCode` function uses `startsWith` iteration order.
+`BIBLE_BOOKS` maps full Traditional Chinese book names to API codes. `BIBLE_ALIASES` maps shorthand (e.g., `太` → `馬太福音`). **Multi-character aliases must come before single-character ones** in `BIBLE_ALIASES` — prevents false prefix matches. `findBookCode` uses `startsWith` iteration order.
 
 ### Schedule Modes
 - **`static`**: Free-form newline-separated text in `settings.scheduleText`. No date association.
-- **`daily`**: JSON object keyed by `YYYY-MM-DD` dates stored in `settings.dailyScheduleJson`. `DEFAULT_DAILY_SCHEDULE` in `constants.tsx` is the shipped default.
+- **`daily`**: JSON object keyed by `YYYY-MM-DD` in `settings.dailyScheduleJson`. `DEFAULT_DAILY_SCHEDULE` in `constants.tsx` is shipped default.
 
-Multiple books on one line use the Chinese enumeration comma `、` (e.g., `俄 1、拿 1-2`).
+Multiple books on one line use Chinese enumeration comma `、` (e.g., `俄 1、拿 1-2`).
 
 ### State & Persistence
-All settings are stored under the `bible_settings` key in `localStorage`. The `saveSettings` / `updateSetting` helpers in `App.tsx` keep React state and localStorage in sync.
+All settings stored under `bible_settings` key in `localStorage`. `saveSettings` / `updateSetting` helpers in `App.tsx` keep React state and localStorage in sync.
 
 ### Theming & Design Tokens
-Three themes: `light`, `sepia`, `dark`. Design tokens live at the top of `App.tsx`:
+Three themes: `light`, `sepia`, `dark`. Design tokens at top of `App.tsx`:
 
 - **`T`** — `Record<Theme, TK>`: color palette per theme (bg, surface, ink, inkSoft, muted, faint, line, lineStrong, pill, success)
 - **`A`** — `AccentTone` (`{ base, soft, tint }`): derived per render via `getAccent(settings.accent, settings.theme)`
 - **`F`** — font family strings: `F.serif` (Noto Serif TC), `F.sans` (Noto Sans TC), `F.label` (Inter)
-- **`ACCENT_PRESETS`** — 5 named accent palettes (ink/pine/crimson/umber/violet), each with light+dark variants
+- **`ACCENT_PRESETS`** — 5 named accent palettes (ink/pine/crimson/umber/violet), light+dark variants each
 - **`FONT_STYLE_PRESETS`** — 4 named font styles (serif/serif-bold/sans/sans-bold) controlling verse font-family and font-weight
 
-When touching UI: use `theme.{token}` for colors, `A.{base|soft|tint}` for accent, `F.{serif|sans|label}` for fonts. Tailwind is loaded via CDN — there is no Vite Tailwind plugin, so JIT/purging does not apply; prefer inline styles using the token system over Tailwind classes.
+When touching UI: use `theme.{token}` for colors, `A.{base|soft|tint}` for accent, `F.{serif|sans|label}` for fonts. Tailwind loaded via CDN — no Vite Tailwind plugin, JIT/purging doesn't apply. Prefer inline styles with token system over Tailwind classes.
 
 ### Deployment
-GitHub Actions (`deploy.yml`) builds and deploys to GitHub Pages on release publish. The build injects `VITE_COMMIT_SHA` (from `github.sha`) into the version string displayed in the footer.
+GitHub Actions (`deploy.yml`) builds and deploys to GitHub Pages on release publish. Build injects `VITE_COMMIT_SHA` (from `github.sha`) into footer version string.
