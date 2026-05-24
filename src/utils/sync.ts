@@ -1,5 +1,5 @@
 export const WORKER_URL: string =
-  import.meta.env.VITE_SYNC_WORKER_URL ?? 'http://localhost:8787';
+  import.meta.env.VITE_SYNC_WORKER_URL || 'http://localhost:8787';
 
 export interface KvSyncData {
   version: number;
@@ -41,7 +41,7 @@ export async function pullSync(
   if (res.status === 404) {
     return {
       mergedTasks: localTasks,
-      needsReconciliation: localTasks.length > 0,
+      needsReconciliation: false,
     };
   }
 
@@ -51,9 +51,7 @@ export async function pullSync(
   const remoteTasks = kvMapToFlat(remote.completedTasks);
   const mergedTasks = mergeTasks(localTasks, remoteTasks);
 
-  const needsReconciliation =
-    mergedTasks.length > remoteTasks.length &&
-    remote.lastDeviceId !== deviceId;
+  const needsReconciliation = mergedTasks.length > remoteTasks.length;
 
   return { mergedTasks, needsReconciliation };
 }

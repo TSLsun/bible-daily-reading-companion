@@ -76,11 +76,11 @@ describe('pullSync', () => {
     expect(result.mergedTasks).toEqual(['2026-01-01:Mt1']);
   });
 
-  it('needsReconciliation true when 404 and local has tasks', async () => {
+  it('needsReconciliation false when 404 even with local tasks (no silent push to foreign syncId)', async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValue({ ok: false, status: 404 });
     const result = await pullSync('uuid-1', 'device-1', ['2026-01-01:Mt1'], 'http://test');
-    expect(result.needsReconciliation).toBe(true);
+    expect(result.needsReconciliation).toBe(false);
   });
 
   it('needsReconciliation false when 404 and local is empty', async () => {
@@ -102,7 +102,7 @@ describe('pullSync', () => {
     expect(result.mergedTasks).toEqual(['2026-01-01:Mt1', '2026-01-02:Mk1']);
   });
 
-  it('needsReconciliation false when lastDeviceId matches own deviceId', async () => {
+  it('needsReconciliation true when local has tasks remote lacks, even if same device wrote last', async () => {
     (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true, status: 200,
       json: async (): Promise<KvSyncData> => ({
@@ -111,7 +111,7 @@ describe('pullSync', () => {
       }),
     });
     const result = await pullSync('uuid-1', 'device-1', ['2026-01-01:Mt1'], 'http://test');
-    expect(result.needsReconciliation).toBe(false);
+    expect(result.needsReconciliation).toBe(true);
   });
 
   it('needsReconciliation true when remote lacks local tasks and different device wrote last', async () => {

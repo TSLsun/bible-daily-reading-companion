@@ -66,6 +66,17 @@ export default {
         return json({ error: 'invalid body' }, 400);
       }
 
+      if (
+        !incoming.completedTasks ||
+        typeof incoming.completedTasks !== 'object' ||
+        Array.isArray(incoming.completedTasks)
+      ) {
+        return json({ error: 'invalid completedTasks' }, 400);
+      }
+      if (typeof incoming.lastDeviceId !== 'string' || !incoming.lastDeviceId) {
+        return json({ error: 'invalid lastDeviceId' }, 400);
+      }
+
       const existing = await env.SYNC_KV.get<KvSyncData>(uuid, 'json');
       const merged: KvSyncData = {
         version: 1,
