@@ -1474,7 +1474,20 @@ const App: React.FC = () => {
             {settings.syncId}
           </span>
           <button
-            onClick={() => void navigator.clipboard.writeText(settings.syncId!).then(() => showToast('已複製')).catch(() => showToast('複製失敗'))}
+            onClick={() => {
+              const text = settings.syncId!;
+              const fallback = () => {
+                const el = document.createElement('textarea');
+                el.value = text; el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+                document.body.appendChild(el); el.focus(); el.select();
+                try { document.execCommand('copy'); showToast('已複製'); }
+                catch { showToast('複製失敗', 'error'); }
+                document.body.removeChild(el);
+              };
+              if (navigator.clipboard?.writeText) {
+                void navigator.clipboard.writeText(text).then(() => showToast('已複製'), fallback);
+              } else { fallback(); }
+            }}
             style={{ appearance: 'none', border: `1px solid ${theme.lineStrong}`, cursor: 'pointer', padding: '3px 8px', borderRadius: 6, background: 'transparent', color: theme.muted, fontFamily: F.label, fontSize: 10 }}
           >複製</button>
           <button
