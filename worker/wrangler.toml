@@ -1,0 +1,8 @@
+name = "bible-sync-worker"
+main = "index.ts"
+compatibility_date = "2024-09-23"
+
+[[kv_namespaces]]
+binding = "SYNC_KV"
+id = "f716247ddcaa47488145c7c5b79494e7"
+preview_id = "f2ee93d7aab74ae992cc76f60e878fa4"

@@ -29,6 +29,9 @@ export interface AppSettings {
   secondaryVersion: string | null;
   scheduleHash: string;
   fontStyle: string;
+  syncId: string | null;
+  deviceId: string;
+  lastSyncedAt: string | null;
 }
 
 export interface ScheduleItem {

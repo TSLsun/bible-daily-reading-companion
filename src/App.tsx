@@ -17,8 +17,19 @@ import {
 import { parseScheduleLine, getDayPlan, buildVerseId } from './utils/schedule-parser';
 import { migrateScheduleJson, migrateCompletedTasks } from './utils/migrations';
 import { searchBible } from './utils/bible-search';
+import { QRCodeSVG } from 'qrcode.react';
+import { pullSync, pushSync, WORKER_URL } from './utils/sync';
 
 declare const __APP_VERSION__: string;
+
+function generateUUID(): string {
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b).map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
 
 // ─── DESIGN TOKENS ──────────────────────────────────────────────────────────
 
@@ -607,6 +618,9 @@ const App: React.FC = () => {
     secondaryVersion: null,
     scheduleHash: "",
     fontStyle: 'serif',
+    syncId: null,
+    deviceId: '',
+    lastSyncedAt: null,
   });
 
   const [migrationInput, setMigrationInput] = useState('');
@@ -632,6 +646,11 @@ const App: React.FC = () => {
   const [mobileSheet, setMobileSheet] = useState<'plan' | 'calendar' | 'menu' | 'search' | null>(null);
   const [settingsInitialized, setSettingsInitialized] = useState(false);
   const [showKeymapHelp, setShowKeymapHelp] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [syncError, setSyncError] = useState('');
+  const [syncShowQr, setSyncShowQr] = useState(false);
+  const [syncShowIdInput, setSyncShowIdInput] = useState(false);
+  const [syncIdInput, setSyncIdInput] = useState('');
 
   // Refs
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -884,6 +903,7 @@ const App: React.FC = () => {
         }
         setSettings(prev => {
           const next = { ...prev, ...parsed };
+          if (!next.deviceId) next.deviceId = generateUUID();
           localStorage.setItem('bible_settings', JSON.stringify(next));
           return next;
         });
@@ -891,6 +911,12 @@ const App: React.FC = () => {
         console.error('Failed to load settings');
       }
     }
+    setSettings(prev => {
+      if (prev.deviceId) return prev;
+      const next = { ...prev, deviceId: generateUUID() };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
     setSettingsInitialized(true);
   }, []);
 
@@ -957,6 +983,95 @@ const App: React.FC = () => {
     const order: Theme[] = ['light', 'sepia', 'dark'];
     updateSetting('theme', order[(order.indexOf(settings.theme) + 1) % 3]);
   };
+
+  const handleEnableSync = useCallback(() => {
+    const id = generateUUID();
+    setSettings(prev => {
+      const next = { ...prev, syncId: id };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
+    showToast('同步已啟用');
+  }, []);
+
+  const handleDisableSync = useCallback(() => {
+    setSettings(prev => {
+      const next = { ...prev, syncId: null };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
+    setSyncStatus('idle');
+    setSyncError('');
+    setSyncShowQr(false);
+    showToast('同步已停用');
+  }, []);
+
+  const handlePull = useCallback(async (syncId: string) => {
+    setSyncStatus('syncing');
+    setSyncError('');
+    try {
+      const { mergedTasks, needsReconciliation } = await pullSync(
+        syncId, settings.deviceId, settings.completedTasks, WORKER_URL
+      );
+      const now = new Date().toISOString();
+      setSettings(prev => {
+        const next = { ...prev, completedTasks: mergedTasks, lastSyncedAt: now };
+        localStorage.setItem('bible_settings', JSON.stringify(next));
+        return next;
+      });
+      if (needsReconciliation) {
+        await pushSync(syncId, settings.deviceId, mergedTasks, WORKER_URL);
+        const reconciledAt = new Date().toISOString();
+        setSettings(prev => {
+          const next = { ...prev, lastSyncedAt: reconciledAt };
+          localStorage.setItem('bible_settings', JSON.stringify(next));
+          return next;
+        });
+      }
+      setSyncStatus('idle');
+      showToast('拉取完成');
+    } catch (e) {
+      setSyncStatus('error');
+      setSyncError(e instanceof Error ? e.message : '同步失敗');
+    }
+  }, [settings.deviceId, settings.completedTasks]);
+
+  const handlePush = useCallback(async () => {
+    if (!settings.syncId) return;
+    setSyncStatus('syncing');
+    setSyncError('');
+    try {
+      const mergedTasks = await pushSync(
+        settings.syncId, settings.deviceId, settings.completedTasks, WORKER_URL
+      );
+      const now = new Date().toISOString();
+      setSettings(prev => {
+        const next = { ...prev, completedTasks: mergedTasks, lastSyncedAt: now };
+        localStorage.setItem('bible_settings', JSON.stringify(next));
+        return next;
+      });
+      setSyncStatus('idle');
+      showToast('推送完成');
+    } catch (e) {
+      setSyncStatus('error');
+      setSyncError(e instanceof Error ? e.message : '同步失敗');
+    }
+  }, [settings.syncId, settings.deviceId, settings.completedTasks]);
+
+  const handleImportSyncId = useCallback((id: string) => {
+    const trimmed = id.trim();
+    if (!trimmed) return;
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_RE.test(trimmed)) { showToast('無效的同步 ID', 'error'); return; }
+    setSettings(prev => {
+      const next = { ...prev, syncId: trimmed };
+      localStorage.setItem('bible_settings', JSON.stringify(next));
+      return next;
+    });
+    setSyncShowIdInput(false);
+    setSyncIdInput('');
+    handlePull(trimmed);
+  }, [handlePull]);
 
   const showToast = (message: string, type = 'success') => {
     setToast({ show: true, message, type });
@@ -1278,6 +1393,140 @@ const App: React.FC = () => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }, []);
+
+  // ── SyncSection ────────────────────────────────────────────────────────────
+
+  const syncSection = (() => {
+    const labelStyle: React.CSSProperties = {
+      fontFamily: F.label, fontSize: 9, fontWeight: 600,
+      letterSpacing: '0.16em', textTransform: 'uppercase', color: theme.muted,
+    };
+    const btnPrimary: React.CSSProperties = {
+      flex: 1, appearance: 'none', border: 'none', cursor: 'pointer',
+      padding: '7px 0', borderRadius: 8, background: A.base, color: '#fff',
+      fontFamily: F.label, fontSize: 11, fontWeight: 600,
+    };
+    const btnOutline: React.CSSProperties = {
+      flex: 1, appearance: 'none', border: `1px solid ${theme.lineStrong}`,
+      cursor: 'pointer', padding: '7px 0', borderRadius: 8,
+      background: 'transparent', color: theme.ink, fontFamily: F.label, fontSize: 11,
+    };
+
+    if (!settings.syncId) {
+      return (
+        <div>
+          <div style={{ ...labelStyle, marginBottom: 8 }}>裝置同步</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={handleEnableSync} style={btnPrimary}>啟用同步</button>
+            <button
+              onClick={() => setSyncShowIdInput(s => !s)}
+              style={btnOutline}
+            >輸入現有 ID</button>
+          </div>
+          {syncShowIdInput && (
+            <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
+              <input
+                type="text"
+                placeholder="貼上同步 ID…"
+                value={syncIdInput}
+                onChange={e => setSyncIdInput(e.target.value)}
+                style={{
+                  flex: 1, padding: '7px 10px', borderRadius: 8,
+                  border: `1px solid ${theme.lineStrong}`, background: theme.bg,
+                  color: theme.ink, fontFamily: 'ui-monospace, monospace',
+                  fontSize: 11, outline: 'none',
+                }}
+              />
+              <button
+                onClick={() => handleImportSyncId(syncIdInput)}
+                disabled={!syncIdInput.trim()}
+                style={{
+                  ...btnPrimary, flex: 'none', padding: '7px 14px',
+                  opacity: syncIdInput.trim() ? 1 : 0.4,
+                  cursor: syncIdInput.trim() ? 'pointer' : 'not-allowed',
+                }}
+              >確認</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const lastSync = settings.lastSyncedAt
+      ? new Date(settings.lastSyncedAt).toLocaleString('zh-TW', {
+          month: 'numeric', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        })
+      : '從未';
+    const isSyncing = syncStatus === 'syncing';
+
+    return (
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={labelStyle}>裝置同步</span>
+          <span style={{ fontFamily: F.label, fontSize: 10, color: A.base, fontWeight: 600 }}>● 已啟用</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <span style={{
+            fontFamily: 'ui-monospace, monospace', fontSize: 10, color: theme.ink,
+            flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {settings.syncId}
+          </span>
+          <button
+            onClick={() => {
+              const text = settings.syncId!;
+              const fallback = () => {
+                const el = document.createElement('textarea');
+                el.value = text; el.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+                document.body.appendChild(el); el.focus(); el.select();
+                try { document.execCommand('copy'); showToast('已複製'); }
+                catch { showToast('複製失敗', 'error'); }
+                document.body.removeChild(el);
+              };
+              if (navigator.clipboard?.writeText) {
+                void navigator.clipboard.writeText(text).then(() => showToast('已複製'), fallback);
+              } else { fallback(); }
+            }}
+            style={{ appearance: 'none', border: `1px solid ${theme.lineStrong}`, cursor: 'pointer', padding: '3px 8px', borderRadius: 6, background: 'transparent', color: theme.muted, fontFamily: F.label, fontSize: 10 }}
+          >複製</button>
+          <button
+            onClick={() => setSyncShowQr(s => !s)}
+            style={{ appearance: 'none', border: `1px solid ${theme.lineStrong}`, cursor: 'pointer', padding: '3px 8px', borderRadius: 6, background: syncShowQr ? theme.pill : 'transparent', color: theme.muted, fontFamily: F.label, fontSize: 10 }}
+          >QR</button>
+        </div>
+        {syncShowQr && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+            <QRCodeSVG value={settings.syncId!} size={120} bgColor={theme.surface} fgColor={theme.ink} />
+          </div>
+        )}
+        <div style={{ fontFamily: F.label, fontSize: 10, color: theme.faint, marginBottom: 8 }}>
+          上次同步：{lastSync}
+        </div>
+        {syncStatus === 'error' && (
+          <div style={{ fontFamily: F.label, fontSize: 10, color: '#c0392b', marginBottom: 6 }}>
+            ⚠ {syncError}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={handlePush}
+            disabled={isSyncing}
+            style={{ ...btnPrimary, opacity: isSyncing ? 0.6 : 1, cursor: isSyncing ? 'not-allowed' : 'pointer' }}
+          >{isSyncing ? '同步中…' : '↑ 推送'}</button>
+          <button
+            onClick={() => handlePull(settings.syncId!)}
+            disabled={isSyncing}
+            style={{ ...btnOutline, opacity: isSyncing ? 0.6 : 1, cursor: isSyncing ? 'not-allowed' : 'pointer' }}
+          >↓ 拉取</button>
+          <button
+            onClick={handleDisableSync}
+            style={{ appearance: 'none', border: `1px solid ${theme.lineStrong}`, cursor: 'pointer', padding: '7px 10px', borderRadius: 8, background: 'transparent', color: theme.muted, fontFamily: F.label, fontSize: 11 }}
+          >停用</button>
+        </div>
+      </div>
+    );
+  })();
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1723,6 +1972,11 @@ const App: React.FC = () => {
                       <button onClick={handleImportProgress} style={{ width: '100%', marginTop: 8, appearance: 'none', border: 'none', cursor: 'pointer', padding: '12px 0', borderRadius: 10, background: A.base, color: '#fff', fontFamily: F.label, fontSize: 13, fontWeight: 600 }}>確認匯入</button>
                     </div>
                   )}
+
+                  <div style={{ height: 1, background: theme.line, margin: '14px 0 14px' }} />
+                  <div style={{ padding: '0 0 4px' }}>
+                    {syncSection}
+                  </div>
 
                   <div style={{ height: 1, background: theme.line, margin: '14px 0 10px' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4 }}>
@@ -2233,6 +2487,11 @@ const App: React.FC = () => {
                       }}>確認匯入</button>
                     </div>
                   )}
+
+                  <div style={{ height: 1, background: theme.line, margin: '6px 6px 8px' }} />
+                  <div style={{ padding: '0 8px 8px' }}>
+                    {syncSection}
+                  </div>
 
                   <div style={{ height: 1, background: theme.line, margin: '6px 6px 2px' }} />
                   <div style={{ padding: '6px 12px 4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
