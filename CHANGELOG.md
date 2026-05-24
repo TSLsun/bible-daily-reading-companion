@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.1.0...bible-companion-v2.2.0) (2026-05-24)
+
+
+### Features
+
+* cross-device sync via Cloudflare Worker + KV ([#28](https://github.com/TSLsun/bible-daily-reading-companion/issues/28)) ([8da263b](https://github.com/TSLsun/bible-daily-reading-companion/commit/8da263b8915e5e7609ca97cf9a44bac1f32c1056))
+
 ## [2.1.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.0.1...bible-companion-v2.1.0) (2026-05-22)
 
 
