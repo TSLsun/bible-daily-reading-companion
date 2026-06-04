@@ -459,7 +459,8 @@ const SearchPanel: React.FC<{
 const ScrollBarOverlay: React.FC<{
   scrollRef: React.RefObject<HTMLDivElement | null>;
   theme: TK;
-}> = ({ scrollRef, theme }) => {
+  bottomOffset?: number;
+}> = ({ scrollRef, theme, bottomOffset = 0 }) => {
   const [visible, setVisible] = useState(false);
   const [canScroll, setCanScroll] = useState(false);
   const [thumbRatio, setThumbRatio] = useState(1);
@@ -541,7 +542,7 @@ const ScrollBarOverlay: React.FC<{
 
   return (
     <div style={{
-      position: 'absolute', right: 2, top: 0, bottom: 0, width: 20,
+      position: 'absolute', right: 2, top: 0, bottom: bottomOffset, width: 20,
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       padding: '4px 0', zIndex: 10,
       opacity: visible ? 1 : 0,
@@ -591,13 +592,14 @@ const ScrollablePane: React.FC<{
   theme: TK;
   style?: React.CSSProperties;
   innerStyle?: React.CSSProperties;
+  bottomOffset?: number;
   children: React.ReactNode;
-}> = ({ scrollRef, theme, style, innerStyle, children }) => (
+}> = ({ scrollRef, theme, style, innerStyle, bottomOffset, children }) => (
   <div style={{ position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', ...style }}>
     <div ref={scrollRef} className="scroll-hide" style={{ flex: 1, overflowY: 'auto', minHeight: 0, ...innerStyle }}>
       {children}
     </div>
-    <ScrollBarOverlay scrollRef={scrollRef} theme={theme} />
+    <ScrollBarOverlay scrollRef={scrollRef} theme={theme} bottomOffset={bottomOffset} />
   </div>
 );
 
@@ -1599,7 +1601,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Mobile reading area */}
-          <ScrollablePane scrollRef={mainScrollRef} theme={theme} style={{ flex: 1 }} innerStyle={{ padding: '20px 20px 130px' }}>
+          <ScrollablePane scrollRef={mainScrollRef} theme={theme} style={{ flex: 1 }} innerStyle={{ padding: '20px 20px 130px' }} bottomOffset={110}>
             {loading ? (
               <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
                 <BookOpen size={40} style={{ color: A.base, opacity: 0.25 }} />
