@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.1](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.2.0...bible-companion-v2.2.1) (2026-06-04)
+
+
+### Bug Fixes
+
+* raise scroll bar overlay above mobile tab bar ([#30](https://github.com/TSLsun/bible-daily-reading-companion/issues/30)) ([597cc50](https://github.com/TSLsun/bible-daily-reading-companion/commit/597cc501ad82ca02b52420954bf4cec82312b17e))
+
 ## [2.2.0](https://github.com/TSLsun/bible-daily-reading-companion/compare/bible-companion-v2.1.0...bible-companion-v2.2.0) (2026-05-24)
 
 
