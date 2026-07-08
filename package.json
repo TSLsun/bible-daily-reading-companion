@@ -12,8 +12,7 @@
     "prepare": "husky",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "release": "standard-version"
+    "test:watch": "vitest"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
